@@ -1,7 +1,7 @@
 # SunDraft
 
 Residential solar design tool — pull up a map, trace a roof outline, place solar modules.
-Portfolio project. See `docs/` (or the SunDraft-project-overview.md shared separately) for
+Portfolio project. See [`docs/PROJECT-OVERVIEW.md`](docs/PROJECT-OVERVIEW.md) for
 full vision, scope, and milestone plan.
 
 ## Repo layout
