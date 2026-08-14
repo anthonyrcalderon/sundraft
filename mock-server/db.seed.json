@@ -1,0 +1,30 @@
+{
+  "projects": [
+    {
+      "id": "template-1",
+      "sessionId": null,
+      "isTemplate": true,
+      "name": "Example: Simple gable roof",
+      "address": "1600 Pennsylvania Ave NW, Washington, DC",
+      "lat": 38.8977,
+      "lng": -77.0365,
+      "roofOutline": null,
+      "modules": [],
+      "createdAt": "2026-08-12T00:00:00.000Z",
+      "updatedAt": "2026-08-12T00:00:00.000Z"
+    },
+    {
+      "id": "template-2",
+      "sessionId": null,
+      "isTemplate": true,
+      "name": "Example: Large hip roof, full layout",
+      "address": "350 Fifth Avenue, New York, NY",
+      "lat": 40.7484,
+      "lng": -73.9857,
+      "roofOutline": null,
+      "modules": [],
+      "createdAt": "2026-08-12T00:00:00.000Z",
+      "updatedAt": "2026-08-12T00:00:00.000Z"
+    }
+  ]
+}

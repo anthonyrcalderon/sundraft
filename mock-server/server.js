@@ -13,7 +13,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, "db.json");
+const DB_PATH = path.join(__dirname, "db.json");const SEED_PATH = path.join(__dirname, "db.seed.json");
+// ...
+if (!fs.existsSync(DB_PATH)) {
+  fs.copyFileSync(SEED_PATH, DB_PATH);
+  console.log("db.json not found — created from db.seed.json");
+}
 const PORT = 4000;
 
 const app = express();
