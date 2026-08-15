@@ -5,8 +5,12 @@ import {
   fetchProjects,
   createBlankProject,
   openProject,
+  updateProjectAddress,
 } from "./features/projects/projectsSlice";
 import type { Project } from "./api/client";
+import type { GeocodeResult } from "./api/geocoding";
+import AddressSearch from "./components/AddressSearch";
+import MapView from "./components/MapView";
 import "./App.css";
 
 function App() {
@@ -34,30 +38,18 @@ function App() {
   }
 
   if (openedProject) {
-    // The map / roof-outline / module-placement canvas is Milestones 2-4.
-    // For now, opening a project just confirms the plumbing worked end to end.
     return (
-      <div className="app">
-        <button className="link" onClick={() => setOpenedProject(null)}>
-          ← Back to projects
-        </button>
-        <h1>{openedProject.name}</h1>
-        <p className="muted">
-          Project id: {openedProject.id} — owned by session{" "}
-          {openedProject.sessionId ?? "(template, unowned)"}
-        </p>
-        <p className="placeholder">
-          The design canvas isn't built yet — this is just confirming that
-          creating/opening a project round-trips through the API correctly.
-        </p>
-      </div>
+      <OpenedProjectView
+        project={openedProject}
+        onBack={() => setOpenedProject(null)}
+      />
     );
   }
 
   return (
     <div className="app">
       <h1>SunDraft</h1>
-      <p className="muted">Foundation milestone — project list &amp; persistence plumbing.</p>
+      <p className="muted">Pick an example, or start a new design from your own address.</p>
 
       <button onClick={handleNewBlank}>+ New blank project</button>
 
@@ -100,3 +92,51 @@ function App() {
 }
 
 export default App;
+
+function OpenedProjectView({
+  project,
+  onBack,
+}: {
+  project: Project;
+  onBack: () => void;
+}) {
+  const dispatch = useDispatch<AppDispatch>();
+  const [center, setCenter] = useState<{ lng: number; lat: number } | null>(
+    project.lat != null && project.lng != null
+      ? { lat: project.lat, lng: project.lng }
+      : null
+  );
+
+  async function handleAddressSelect(result: GeocodeResult) {
+    setCenter({ lng: result.lng, lat: result.lat });
+    await dispatch(
+      updateProjectAddress({
+        id: project.id,
+        address: result.placeName,
+        lat: result.lat,
+        lng: result.lng,
+      })
+    );
+  }
+
+  return (
+    <div className="app app--wide">
+      <button className="link" onClick={onBack}>
+        ← Back to projects
+      </button>
+      <h1>{project.name}</h1>
+
+      <AddressSearch onSelect={handleAddressSelect} />
+
+      <MapView center={center} />
+
+      {!center && (
+        <p className="muted small">
+          Search an address above to center the map on it — like your own
+          home or work, so you're designing on something familiar. Roof
+          tracing and module placement land in the next milestone.
+        </p>
+      )}
+    </div>
+  );
+}

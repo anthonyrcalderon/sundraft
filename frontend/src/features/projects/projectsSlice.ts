@@ -34,6 +34,16 @@ export const openProject = createAsyncThunk(
   }
 );
 
+export const updateProjectAddress = createAsyncThunk(
+  "projects/updateAddress",
+  (args: { id: string; address: string; lat: number; lng: number }) =>
+    api.updateProject(args.id, {
+      address: args.address,
+      lat: args.lat,
+      lng: args.lng,
+    })
+);
+
 const projectsSlice = createSlice({
   name: "projects",
   initialState,
@@ -63,6 +73,10 @@ const projectsSlice = createSlice({
         if (!state.items.some((p) => p.id === action.payload.id)) {
           state.items.push(action.payload);
         }
+      })
+      .addCase(updateProjectAddress.fulfilled, (state, action) => {
+        const idx = state.items.findIndex((p) => p.id === action.payload.id);
+        if (idx !== -1) state.items[idx] = action.payload;
       });
   },
 });
