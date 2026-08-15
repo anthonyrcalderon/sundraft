@@ -1,7 +1,8 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
-import * as lambda from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
 import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 
@@ -36,13 +37,17 @@ export class SunDraftStack extends cdk.Stack {
       TABLE_NAME: table.tableName,
     };
 
-    const projectsFn = new lambda.Function(this, "ProjectsFunction", {
-      runtime: lambda.Runtime.NODEJS_20_X,
-      handler: "projects.handler",
-      code: lambda.Code.fromAsset("lambda"),
+    const projectsFn = new NodejsFunction(this, "ProjectsFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: "lambda/projects.ts",
+      handler: "handler",
       environment: commonEnv,
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
+      bundling: {
+        minify: true,
+        externalModules: ["@aws-sdk/*"], // already present in the Node 20 runtime
+      },
     });
     table.grantReadWriteData(projectsFn);
 

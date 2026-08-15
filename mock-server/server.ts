@@ -5,7 +5,7 @@
 // Storage is just db.json on disk, rewritten on every change. Good enough for
 // local dev; not meant to survive a real deploy.
 
-import express from "express";
+import express, { type Request, type Response } from "express";
 import cors from "cors";
 import { nanoid } from "nanoid";
 import fs from "node:fs";
@@ -13,33 +13,64 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, "db.json");const SEED_PATH = path.join(__dirname, "db.seed.json");
-// ...
+const DB_PATH = path.join(__dirname, "db.json");
+const SEED_PATH = path.join(__dirname, "db.seed.json");
+const PORT = 4000;
+
+// db.json is generated, not committed — it's your local mutable state and
+// changes every time you add/edit a project. db.seed.json is the committed
+// source of truth for the starting templates. If db.json doesn't exist yet
+// (fresh clone, or you deleted it to reset your local data), recreate it
+// from the seed automatically.
 if (!fs.existsSync(DB_PATH)) {
   fs.copyFileSync(SEED_PATH, DB_PATH);
   console.log("db.json not found — created from db.seed.json");
 }
-const PORT = 4000;
+
+export interface Project {
+  id: string;
+  sessionId: string | null;
+  isTemplate: boolean;
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  roofOutline: GeoJSON.Polygon | null;
+  modules: Array<{
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotation: number;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Db {
+  projects: Project[];
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-function readDb() {
+function readDb(): Db {
   return JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
 }
 
-function writeDb(db) {
+function writeDb(db: Db): void {
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
 
-function isAdmin(req) {
+function isAdmin(req: Request): boolean {
   // Placeholder admin check for the mock server only. The real backend will
   // need a real auth story for admin mode — this just unblocks local dev.
   return req.header("x-admin") === "true";
 }
 
-function requireSessionId(req, res) {
+function requireSessionId(req: Request, res: Response): string | null {
   const sessionId = req.header("x-session-id");
   if (!sessionId) {
     res.status(400).json({ error: "Missing X-Session-Id header" });
@@ -49,7 +80,7 @@ function requireSessionId(req, res) {
 }
 
 // List projects visible to this session: all templates + this session's own projects
-app.get("/api/projects", (req, res) => {
+app.get("/api/projects", (req: Request, res: Response) => {
   const sessionId = requireSessionId(req, res);
   if (!sessionId) return;
 
@@ -60,21 +91,21 @@ app.get("/api/projects", (req, res) => {
   res.json(visible);
 });
 
-app.get("/api/projects/:id", (req, res) => {
+app.get("/api/projects/:id", (req: Request, res: Response) => {
   const db = readDb();
   const project = db.projects.find((p) => p.id === req.params.id);
-  if (!project) return res.status(404).json({ error: "Not found" });
+  if (!project) return void res.status(404).json({ error: "Not found" });
   res.json(project);
 });
 
 // Create a new blank project owned by this session
-app.post("/api/projects", (req, res) => {
+app.post("/api/projects", (req: Request, res: Response) => {
   const sessionId = requireSessionId(req, res);
   if (!sessionId) return;
 
   const db = readDb();
   const now = new Date().toISOString();
-  const project = {
+  const project: Project = {
     id: nanoid(10),
     sessionId,
     isTemplate: false,
@@ -95,16 +126,16 @@ app.post("/api/projects", (req, res) => {
 // Fork a template into a new project owned by this session.
 // This is the one rule that matters for the demo: opening a template never
 // edits the shared original, it always creates a private copy.
-app.post("/api/projects/:id/fork", (req, res) => {
+app.post("/api/projects/:id/fork", (req: Request, res: Response) => {
   const sessionId = requireSessionId(req, res);
   if (!sessionId) return;
 
   const db = readDb();
   const source = db.projects.find((p) => p.id === req.params.id);
-  if (!source) return res.status(404).json({ error: "Not found" });
+  if (!source) return void res.status(404).json({ error: "Not found" });
 
   const now = new Date().toISOString();
-  const forked = {
+  const forked: Project = {
     ...structuredClone(source),
     id: nanoid(10),
     sessionId,
@@ -120,30 +151,30 @@ app.post("/api/projects/:id/fork", (req, res) => {
 
 // Update a project. Regular users can only update their own, non-template
 // projects. Admins can update anything, including templates directly.
-app.put("/api/projects/:id", (req, res) => {
+app.put("/api/projects/:id", (req: Request, res: Response) => {
   const sessionId = requireSessionId(req, res);
   if (!sessionId) return;
 
   const db = readDb();
   const idx = db.projects.findIndex((p) => p.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  if (idx === -1) return void res.status(404).json({ error: "Not found" });
 
   const project = db.projects[idx];
   const admin = isAdmin(req);
 
   if (project.isTemplate && !admin) {
-    return res
+    return void res
       .status(403)
       .json({ error: "Templates are read-only. Fork this project to edit it." });
   }
   if (!project.isTemplate && project.sessionId !== sessionId && !admin) {
-    return res.status(403).json({ error: "Not your project" });
+    return void res.status(403).json({ error: "Not your project" });
   }
 
-  const updated = {
+  const updated: Project = {
     ...project,
     ...req.body,
-    id: project.id, // never allow overwriting these via body
+    id: project.id,
     sessionId: project.sessionId,
     isTemplate: project.isTemplate,
     updatedAt: new Date().toISOString(),
@@ -153,20 +184,20 @@ app.put("/api/projects/:id", (req, res) => {
   res.json(updated);
 });
 
-app.delete("/api/projects/:id", (req, res) => {
+app.delete("/api/projects/:id", (req: Request, res: Response) => {
   const sessionId = requireSessionId(req, res);
   if (!sessionId) return;
 
   const db = readDb();
   const project = db.projects.find((p) => p.id === req.params.id);
-  if (!project) return res.status(404).json({ error: "Not found" });
+  if (!project) return void res.status(404).json({ error: "Not found" });
 
   const admin = isAdmin(req);
   if (project.isTemplate && !admin) {
-    return res.status(403).json({ error: "Templates cannot be deleted here" });
+    return void res.status(403).json({ error: "Templates cannot be deleted here" });
   }
   if (!project.isTemplate && project.sessionId !== sessionId && !admin) {
-    return res.status(403).json({ error: "Not your project" });
+    return void res.status(403).json({ error: "Not your project" });
   }
 
   db.projects = db.projects.filter((p) => p.id !== req.params.id);
@@ -175,12 +206,12 @@ app.delete("/api/projects/:id", (req, res) => {
 });
 
 // Admin-only: create a new template directly (bypasses forking).
-app.post("/api/templates", (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: "Admin only" });
+app.post("/api/templates", (req: Request, res: Response) => {
+  if (!isAdmin(req)) return void res.status(403).json({ error: "Admin only" });
 
   const db = readDb();
   const now = new Date().toISOString();
-  const template = {
+  const template: Project = {
     id: nanoid(10),
     sessionId: null,
     isTemplate: true,

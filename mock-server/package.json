@@ -4,11 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "tsx server.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "nanoid": "^5.0.7"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/geojson": "^7946.0.14",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
   }
 }

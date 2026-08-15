@@ -1,24 +1,46 @@
-// Real backend for the projects API — same contract as mock-server/server.js,
+// Real backend for the projects API — same contract as mock-server/server.ts,
 // so the frontend's api/client.ts doesn't need to change when this replaces it.
 // One Lambda, routed internally by HTTP method + path (see infra routes).
 
-const {
-  DynamoDBClient,
-} = require("@aws-sdk/client-dynamodb");
-const {
+import type {
+  APIGatewayProxyEventV2,
+  APIGatewayProxyResultV2,
+} from "aws-lambda";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import {
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
-  UpdateCommand,
   DeleteCommand,
   ScanCommand,
-} = require("@aws-sdk/lib-dynamodb");
-const { randomUUID } = require("crypto");
+} from "@aws-sdk/lib-dynamodb";
+import { randomUUID } from "node:crypto";
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const TABLE_NAME = process.env.TABLE_NAME;
+const TABLE_NAME = process.env.TABLE_NAME as string;
 
-function json(status, body) {
+interface Project {
+  id: string;
+  sessionId: string;
+  isTemplate: boolean;
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  roofOutline: GeoJSON.Polygon | null;
+  modules: Array<{
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotation: number;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function json(status: number, body?: unknown): APIGatewayProxyResultV2 {
   return {
     statusCode: status,
     headers: { "Content-Type": "application/json" },
@@ -26,27 +48,26 @@ function json(status, body) {
   };
 }
 
-function getSessionId(event) {
-  return event.headers?.["x-session-id"] || event.headers?.["X-Session-Id"];
+function getSessionId(event: APIGatewayProxyEventV2): string | undefined {
+  return event.headers?.["x-session-id"] ?? event.headers?.["X-Session-Id"];
 }
 
-function isAdmin(event) {
+function isAdmin(event: APIGatewayProxyEventV2): boolean {
   return event.headers?.["x-admin"] === "true";
 }
 
-exports.handler = async (event) => {
+export const handler = async (
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> => {
   const method = event.requestContext.http.method;
   const path = event.requestContext.http.path;
   const body = event.body ? JSON.parse(event.body) : {};
 
   try {
-    // GET/POST /projects
     if (path === "/projects" && method === "GET") {
       const sessionId = getSessionId(event);
       if (!sessionId) return json(400, { error: "Missing X-Session-Id header" });
 
-      // Templates (sessionId = "TEMPLATE") + this session's own projects.
-      // Two queries against the bySession GSI beats a table scan.
       const [templates, mine] = await Promise.all([
         client.send(
           new ScanCommand({
@@ -63,7 +84,7 @@ exports.handler = async (event) => {
           })
         ),
       ]);
-      return json(200, [...(templates.Items || []), ...(mine.Items || [])]);
+      return json(200, [...(templates.Items ?? []), ...(mine.Items ?? [])]);
     }
 
     if (path === "/projects" && method === "POST") {
@@ -71,7 +92,7 @@ exports.handler = async (event) => {
       if (!sessionId) return json(400, { error: "Missing X-Session-Id header" });
 
       const now = new Date().toISOString();
-      const project = {
+      const project: Project = {
         id: randomUUID(),
         sessionId,
         isTemplate: false,
@@ -88,7 +109,6 @@ exports.handler = async (event) => {
       return json(201, project);
     }
 
-    // GET/PUT/DELETE /projects/{id}
     const idMatch = path.match(/^\/projects\/([^/]+)$/);
     if (idMatch && method === "GET") {
       const res = await client.send(
@@ -115,8 +135,8 @@ exports.handler = async (event) => {
         return json(403, { error: "Not your project" });
       }
 
-      const updated = {
-        ...existing.Item,
+      const updated: Project = {
+        ...(existing.Item as Project),
         ...body,
         id: existing.Item.id,
         sessionId: existing.Item.sessionId,
@@ -148,7 +168,6 @@ exports.handler = async (event) => {
       return json(204);
     }
 
-    // POST /projects/{id}/fork
     const forkMatch = path.match(/^\/projects\/([^/]+)\/fork$/);
     if (forkMatch && method === "POST") {
       const sessionId = getSessionId(event);
@@ -160,12 +179,12 @@ exports.handler = async (event) => {
       if (!source.Item) return json(404, { error: "Not found" });
 
       const now = new Date().toISOString();
-      const forked = {
-        ...source.Item,
+      const forked: Project = {
+        ...(source.Item as Project),
         id: randomUUID(),
         sessionId,
         isTemplate: false,
-        name: source.Item.name.replace(/^Example:\s*/, ""),
+        name: (source.Item.name as string).replace(/^Example:\s*/, ""),
         createdAt: now,
         updatedAt: now,
       };
@@ -173,12 +192,11 @@ exports.handler = async (event) => {
       return json(201, forked);
     }
 
-    // POST /templates (admin only)
     if (path === "/templates" && method === "POST") {
       if (!isAdmin(event)) return json(403, { error: "Admin only" });
 
       const now = new Date().toISOString();
-      const template = {
+      const template: Project = {
         id: randomUUID(),
         sessionId: "TEMPLATE",
         isTemplate: true,
