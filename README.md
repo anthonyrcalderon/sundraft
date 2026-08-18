@@ -31,32 +31,29 @@ are Milestones 3–4.
 
 ## Getting this running locally
 
-You'll need Node.js installed (18+ recommended), and a free Mapbox token
-(sign up at https://account.mapbox.com/ — no card required for the free
-tier: 50,000 map loads + 100,000 geocoding requests/month).
+You'll need Node.js installed (18+ recommended). No API keys, tokens, or
+signups are needed for anything in this milestone — map tiles (MapLibre GL
+JS + Esri World Imagery) and address search (Nominatim) are both free with
+no account required. That was a deliberate choice: see
+`docs/PROJECT-OVERVIEW.md` for why Mapbox was dropped in favor of this stack.
 
 ```bash
 # 1. Install everything, once, from the repo root
 npm install
 
-# 2. Set up the frontend's env file
-cd frontend
-cp .env.example .env.local
-# edit .env.local and paste your Mapbox token into VITE_MAPBOX_TOKEN
-cd ..
-
-# 3. Start the mock backend (fake API + seeded example projects)
+# 2. Start the mock backend (fake API + seeded example projects)
 cd mock-server && npm start
 # → running at http://localhost:4000
 
-# 4. In a second terminal, start the frontend
+# 3. In a second terminal, start the frontend
 cd frontend && npm run dev
 # → running at http://localhost:5173
 ```
 
 Open http://localhost:5173 — you should see a project list pulled from the
 mock server, including the 2 seeded example ("template") projects. Open any
-project and search an address to see the map center on it.
+project and search an address to see the map center on it, with real
+satellite imagery.
 
 **Resetting your local data:** `mock-server/db.json` is where your local
 projects actually live, and it's gitignored since it changes constantly.
