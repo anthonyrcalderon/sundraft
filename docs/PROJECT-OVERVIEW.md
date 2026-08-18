@@ -44,7 +44,7 @@ The smallest version that proves the core interaction loop:
 1. **Foundation** — AWS account setup, Amplify project scaffolding, CDK stack for Lambda/DynamoDB/API Gateway, DynamoDB table design, local Express+JSON mock for early frontend dev.
    *Milestone: app runs fully locally against the mock backend; a placeholder deploy is reachable on Amplify.*
 
-2. **Map + address search** — Mapbox integration, geocode a typed address, center/zoom the map.
+2. **Map + address search** — MapLibre GL JS + Esri World Imagery + Nominatim, geocode a typed address, center/zoom the map.
    *Milestone: type an address, see a real map centered on it.*
 
 3. **Roof outline tool** — drawing UI layered on the map, stored as GeoJSON.
@@ -70,7 +70,7 @@ Scope is expected to shift somewhat as work progresses — this is a working out
 
 ## Hosting Costs & Platforms
 
-Stack decided: **Amplify** (frontend hosting, already familiar) + **Lambda / DynamoDB / API Gateway** (backend, via CDK) + **Mapbox** (map tiles + geocoding) + **Google Solar API** (follow-on shading/production feature, US-only).
+Stack decided: **Amplify** (frontend hosting, already familiar) + **Lambda / DynamoDB / API Gateway** (backend, via CDK) + **MapLibre GL JS / Esri World Imagery / Nominatim** (map tiles + geocoding — switched from an original Mapbox plan after discovering Mapbox now requires a credit card on file even for its free tier) + **Google Solar API** (follow-on shading/production feature, US-only).
 
 Realistic cost for a low-traffic demo:
 
@@ -80,11 +80,13 @@ Realistic cost for a low-traffic demo:
 | Backend compute | Lambda | $0 — permanent "Always Free" tier: 1M requests + 400,000 GB-seconds/month, never expires |
 | Database | DynamoDB | $0 — permanent "Always Free" tier: 25GB storage / 200M requests/month, never expires |
 | API layer | API Gateway | $0 during Free-plan window; pay-per-use after (fractions of a cent per call — use HTTP APIs, not REST, for ~71% lower cost) |
-| Map tiles + geocoding | Mapbox | $0 — 50,000 map loads + 100,000 geocoding requests free/month |
+| Map tiles + geocoding | MapLibre GL JS + Esri World Imagery + Nominatim | $0, no account/card required for any of the three — see note below |
 | Shading/production (follow-on) | Google Solar API | $0 — 10,000 Building Insights calls/month free |
 | Domain name | Registrar (e.g. Cloudflare, Route 53, Namecheap) | ~$10-15/year |
 
 **Important AWS account note:** new accounts (created 2026 or later) are on AWS's newer **Free plan** model — 6 months of free usage/credits, after which the account auto-closes rather than silently billing. This is safer than the old model (no risk of a surprise bill from forgetting to cancel), but it does mean a decision is needed around month 6 on whether to upgrade to a paid plan to keep the demo live long-term. Watch for two classic traps regardless of plan: don't provision a NAT Gateway (~$32/month just for being on) and set a $1 AWS budget alert on day one.
+
+**Map stack note:** originally planned around Mapbox, but Mapbox now requires a credit card on file to activate its free tier at all — switched to a zero-signup stack instead: MapLibre GL JS (open-source, API-compatible fork of Mapbox's old open-source SDK) for rendering, Esri's public World Imagery tiles for satellite/aerial view, and OpenStreetMap's Nominatim for address search. Esri's tiles have no formal published limit (unlike Mapbox's numeric free tier) but also no guaranteed SLA — an acceptable trade for a low-traffic demo with zero billing risk. Nominatim has a soft ~1 request/second usage policy, comfortably covered by the debounced search box.
 
 Domain names are cheap and low-risk to change later — the name isn't tied to code or data, so renaming later just means buying a new domain and repointing DNS.
 
@@ -95,7 +97,7 @@ Domain names are cheap and low-risk to change later — the name isn't tied to c
 - **Frontend:** React + Redux, TypeScript
 - **Backend:** AWS (Lambda, DynamoDB, CDK for infra-as-code), hosted via Amplify
 - **Local dev:** Express + JSON mock server, to build against before deploying real AWS infra
-- **Maps:** Mapbox GL JS (tiles + geocoding)
+- **Maps:** MapLibre GL JS + Esri World Imagery (satellite tiles) + Nominatim (geocoding) — all free, no API key or card required
 - **Follow-on:** Google Solar API (shading + production estimates, US-only)
 
 ## Open Questions / Not Yet Decided
