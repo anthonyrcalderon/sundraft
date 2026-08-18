@@ -69,3 +69,57 @@ button:hover {
   padding: 0.75rem 0;
   border-bottom: 1px solid #eee;
 }
+
+.app--wide {
+  max-width: 960px;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.address-search {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.address-search input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+.address-results {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.address-results li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 0;
+  padding: 0.6rem 0.85rem;
+}
+
+.map-view {
+  width: 100%;
+  height: 480px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}

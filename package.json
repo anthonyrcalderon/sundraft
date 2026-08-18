@@ -1,0 +1,10 @@
+{
+  "name": "sundraft",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "frontend",
+    "mock-server",
+    "infra"
+  ]
+}

@@ -11,6 +11,7 @@ import { nanoid } from "nanoid";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Project } from "sundraft-shared";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, "db.json");
@@ -25,27 +26,6 @@ const PORT = 4000;
 if (!fs.existsSync(DB_PATH)) {
   fs.copyFileSync(SEED_PATH, DB_PATH);
   console.log("db.json not found — created from db.seed.json");
-}
-
-export interface Project {
-  id: string;
-  sessionId: string | null;
-  isTemplate: boolean;
-  name: string;
-  address: string | null;
-  lat: number | null;
-  lng: number | null;
-  roofOutline: GeoJSON.Polygon | null;
-  modules: Array<{
-    id: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    rotation: number;
-  }>;
-  createdAt: string;
-  updatedAt: string;
 }
 
 interface Db {
@@ -174,7 +154,7 @@ app.put("/api/projects/:id", (req: Request, res: Response) => {
   const updated: Project = {
     ...project,
     ...req.body,
-    id: project.id,
+    id: project.id, // never allow overwriting these via body
     sessionId: project.sessionId,
     isTemplate: project.isTemplate,
     updatedAt: new Date().toISOString(),

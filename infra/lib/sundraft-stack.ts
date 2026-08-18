@@ -46,7 +46,9 @@ export class SunDraftStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(10),
       bundling: {
         minify: true,
-        externalModules: ["@aws-sdk/*"], // already present in the Node 20 runtime
+        // aws-sdk v3 is already present in the Node 20 Lambda runtime image;
+        // excluding it keeps the deploy bundle small instead of duplicating it.
+        externalModules: ["@aws-sdk/*"],
       },
     });
     table.grantReadWriteData(projectsFn);

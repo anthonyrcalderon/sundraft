@@ -15,30 +15,10 @@ import {
   ScanCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "node:crypto";
+import type { Project } from "sundraft-shared";
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const TABLE_NAME = process.env.TABLE_NAME as string;
-
-interface Project {
-  id: string;
-  sessionId: string;
-  isTemplate: boolean;
-  name: string;
-  address: string | null;
-  lat: number | null;
-  lng: number | null;
-  roofOutline: GeoJSON.Polygon | null;
-  modules: Array<{
-    id: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    rotation: number;
-  }>;
-  createdAt: string;
-  updatedAt: string;
-}
 
 function json(status: number, body?: unknown): APIGatewayProxyResultV2 {
   return {
@@ -64,10 +44,14 @@ export const handler = async (
   const body = event.body ? JSON.parse(event.body) : {};
 
   try {
+    // GET/POST /projects
     if (path === "/projects" && method === "GET") {
       const sessionId = getSessionId(event);
       if (!sessionId) return json(400, { error: "Missing X-Session-Id header" });
 
+      // Templates (sessionId = "TEMPLATE") + this session's own projects.
+      // Two scans beats nothing at demo scale; the bySession GSI is what
+      // would back a real Query here instead of a Scan at real scale.
       const [templates, mine] = await Promise.all([
         client.send(
           new ScanCommand({
@@ -109,6 +93,7 @@ export const handler = async (
       return json(201, project);
     }
 
+    // GET/PUT/DELETE /projects/{id}
     const idMatch = path.match(/^\/projects\/([^/]+)$/);
     if (idMatch && method === "GET") {
       const res = await client.send(
@@ -168,6 +153,7 @@ export const handler = async (
       return json(204);
     }
 
+    // POST /projects/{id}/fork
     const forkMatch = path.match(/^\/projects\/([^/]+)\/fork$/);
     if (forkMatch && method === "POST") {
       const sessionId = getSessionId(event);
@@ -192,6 +178,7 @@ export const handler = async (
       return json(201, forked);
     }
 
+    // POST /templates (admin only)
     if (path === "/templates" && method === "POST") {
       if (!isAdmin(event)) return json(403, { error: "Admin only" });
 
