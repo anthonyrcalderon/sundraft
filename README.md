@@ -88,8 +88,8 @@ A `Project` looks like this everywhere (mock server, DynamoDB, frontend types):
   isTemplate: boolean;    // true = one of the 2-3 read-only examples
   name: string;
   address?: string;
-  roofOutline: GeoJSON.Polygon | null;
-  modules: Array<{ id: string; x: number; y: number; width: number; height: number; rotation: number }>;
+  roofs: Array<{ id: string; roofOutline: GeoJSON.Polygon | null; azimuth: number; tilt: number }>;
+  modules: Array<{ id: string; roofId: string; moduleTypeId: string; x: number; y: number; orientation: "portrait" | "landscape" }>;
   createdAt: string;
   updatedAt: string;
 }

@@ -8,7 +8,7 @@
       "address": "1600 Pennsylvania Ave NW, Washington, DC",
       "lat": 38.8977,
       "lng": -77.0365,
-      "roofOutline": null,
+      "roofs": [],
       "modules": [],
       "createdAt": "2026-08-12T00:00:00.000Z",
       "updatedAt": "2026-08-12T00:00:00.000Z"
@@ -21,7 +21,7 @@
       "address": "350 Fifth Avenue, New York, NY",
       "lat": 40.7484,
       "lng": -73.9857,
-      "roofOutline": null,
+      "roofs": [],
       "modules": [],
       "createdAt": "2026-08-12T00:00:00.000Z",
       "updatedAt": "2026-08-12T00:00:00.000Z"
