@@ -1,7 +1,7 @@
 # SunDraft — Project Overview
 
-**Status:** Scoping complete. No code written yet.
-**Last updated:** August 12, 2026
+**Status:** Milestones 1–3 complete (Foundation, Map + address search, Roof outline tool). Next up: Milestone 4 (Module placement).
+**Last updated:** August 18, 2026
 
 ---
 

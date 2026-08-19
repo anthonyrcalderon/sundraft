@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { api, type Project } from "../../api/client";
+import type { Roof } from "sundraft-shared";
 
 interface ProjectsState {
   items: Project[];
@@ -44,6 +45,12 @@ export const updateProjectAddress = createAsyncThunk(
     })
 );
 
+export const updateProjectRoofs = createAsyncThunk(
+  "projects/updateRoofs",
+  (args: { id: string; roofs: Roof[] }) =>
+    api.updateProject(args.id, { roofs: args.roofs })
+);
+
 const projectsSlice = createSlice({
   name: "projects",
   initialState,
@@ -75,6 +82,10 @@ const projectsSlice = createSlice({
         }
       })
       .addCase(updateProjectAddress.fulfilled, (state, action) => {
+        const idx = state.items.findIndex((p) => p.id === action.payload.id);
+        if (idx !== -1) state.items[idx] = action.payload;
+      })
+      .addCase(updateProjectRoofs.fulfilled, (state, action) => {
         const idx = state.items.findIndex((p) => p.id === action.payload.id);
         if (idx !== -1) state.items[idx] = action.payload;
       });
