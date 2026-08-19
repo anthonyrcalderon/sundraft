@@ -150,6 +150,19 @@ button:hover {
 
 .roof-controls {
   margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.module-controls {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #eef1f7;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
 }
 
 .roof-list {

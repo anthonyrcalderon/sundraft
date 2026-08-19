@@ -1,7 +1,7 @@
 # SunDraft — Project Overview
 
-**Status:** Milestones 1–3 complete (Foundation, Map + address search, Roof outline tool). Next up: Milestone 4 (Module placement).
-**Last updated:** August 18, 2026
+**Status:** Milestones 1–4 complete (Foundation, Map + address search, Roof outline tool, Module placement). Next up: Milestone 5 (Persistence layer).
+**Last updated:** August 19, 2026
 
 ---
 
