@@ -71,10 +71,14 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     dispatch(updateProjectModules({ id: project.id, modules: next }));
   }
 
+  // arcTODO: No snapping. No Collision.
   function handleAddModule() {
     setSelectedModuleId(null);
     setPendingPlacement({ moduleTypeId: DEFAULT_MODULE_TYPE.id, orientation: "portrait" });
   }
+  // arcTODO: Add larger scale module-Add (ie multiple modules at once)
+
+  // arcTODO: Add multi-moduleSelect (for move/delete)
 
   function handlePlacementResolved(roofId: string, x: number, y: number) {
     if (pendingPlacement?.excludeModuleId) {

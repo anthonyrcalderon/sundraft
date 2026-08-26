@@ -53,7 +53,7 @@ const emptyFC = (): GeoJSON.FeatureCollection => ({
 export interface PendingPlacement {
   moduleTypeId: string;
   orientation: ModuleOrientation;
-  excludeModuleId?: string; // set when repositioning an existing module
+  excludeModuleId?: string; // set when repositioning an existing module // arcTODO weird way of handling this?
 }
 
 interface Props {
