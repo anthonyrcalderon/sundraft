@@ -8,10 +8,18 @@ import {
 } from "../features/projects/projectsSlice";
 import type { Project } from "../api/client";
 import type { GeocodeResult } from "../api/geocoding";
-import { DEFAULT_MODULE_TYPE, MODULE_TYPES, type Module, type Roof } from "sundraft-shared";
+import {
+  DEFAULT_MODULE_TYPE,
+  MODULE_TYPES,
+  fillRoofWithModules,
+  type GroupMoveResult,
+  type Module,
+  type Roof,
+} from "sundraft-shared";
 import AddressSearch from "./AddressSearch";
 import MapView, { type PendingPlacement } from "./MapView";
 import RoofList from "./RoofList";
+import { useHotkey } from "../hooks/useHotkey";
 
 interface Props {
   project: Project;
@@ -30,7 +38,9 @@ export default function OpenedProjectView({ project, onBack }: Props) {
 
   const [modules, setModules] = useState<Module[]>(project.modules);
   const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
-  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
+  const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([]);
+
+  useHotkey("Escape", () => setSelectedModuleIds([]));
 
   async function handleAddressSelect(result: GeocodeResult) {
     setCenter({ lng: result.lng, lat: result.lat });
@@ -66,62 +76,128 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     persistModules(modules.filter((m) => m.roofId !== id));
   }
 
+  function handleFillRoof(roofId: string) {
+    const roof = roofs.find((r) => r.id === roofId);
+    if (!roof) return;
+    const positions = fillRoofWithModules(roof, DEFAULT_MODULE_TYPE, "portrait", modules, MODULE_TYPES);
+    const newModules: Module[] = positions.map((p) => ({
+      id: crypto.randomUUID(),
+      roofId,
+      moduleTypeId: DEFAULT_MODULE_TYPE.id,
+      x: p.x,
+      y: p.y,
+      orientation: "portrait",
+    }));
+    persistModules([...modules, ...newModules]);
+  }
+
   function persistModules(next: Module[]) {
     setModules(next);
     dispatch(updateProjectModules({ id: project.id, modules: next }));
   }
 
+  // arcTODO: Handle snapping. Handle module-to-roof collision (currently only
+  // checks that the click point is inside the roof, not the module's full footprint).
   function handleAddModule() {
-    setSelectedModuleId(null);
-    setPendingPlacement({ moduleTypeId: DEFAULT_MODULE_TYPE.id, orientation: "portrait" });
+    setSelectedModuleIds([]);
+    setPendingPlacement({ kind: "new", moduleTypeId: DEFAULT_MODULE_TYPE.id, orientation: "portrait" });
+  }
+
+  function handleModuleClick(id: string | null, additive: boolean) {
+    if (!id) {
+      setSelectedModuleIds([]);
+      return;
+    }
+
+    setSelectedModuleIds((prev) => {
+      const alreadySelected = prev.includes(id);
+
+      // Multi-select is the default: a plain click always adds, never
+      // replaces or removes. Shift/ctrl/cmd is reserved for removing one
+      // already-selected module at a time.
+      if (alreadySelected) {
+        return additive ? prev.filter((existing) => existing !== id) : prev;
+      }
+
+      // A multi-selection only makes sense within one roof — Move/Fill
+      // and (eventually) group-rotate all reason about "the roof this
+      // selection is on." Clicking a module on a different roof clears
+      // the selection instead of adding to it (or doing nothing) — the
+      // user gets a clean slate to start selecting on the new roof from.
+      //
+      // TODO: this is a roof-level grouping; see "Deferred: Subarrays"
+      // in docs/PROJECT-OVERVIEW.md for a finer-grained (adjacency-based)
+      // grouping within a roof that this restriction would eventually
+      // become, once "touching" is actually defined.
+      const currentRoofId = prev.length > 0 ? modules.find((m) => m.id === prev[0])?.roofId : undefined;
+      const clickedRoofId = modules.find((m) => m.id === id)?.roofId;
+      if (currentRoofId && clickedRoofId !== currentRoofId) return [];
+      return [...prev, id];
+    });
+  }
+
+  function handleModuleDoubleClick(roofId: string) {
+    setSelectedModuleIds(modules.filter((m) => m.roofId === roofId).map((m) => m.id));
   }
 
   function handlePlacementResolved(roofId: string, x: number, y: number) {
-    if (pendingPlacement?.excludeModuleId) {
-      const movingId = pendingPlacement.excludeModuleId;
-      persistModules(
-        modules.map((m) => (m.id === movingId ? { ...m, roofId, x, y } : m))
-      );
-    } else {
-      const newModule: Module = {
-        id: crypto.randomUUID(),
-        roofId,
-        moduleTypeId: DEFAULT_MODULE_TYPE.id,
-        x,
-        y,
-        orientation: "portrait",
-      };
-      persistModules([...modules, newModule]);
-    }
+    const newModule: Module = {
+      id: crypto.randomUUID(),
+      roofId,
+      moduleTypeId: DEFAULT_MODULE_TYPE.id,
+      x,
+      y,
+      orientation: "portrait",
+    };
+    persistModules([...modules, newModule]);
     setPendingPlacement(null);
   }
 
   function handleRotateSelected() {
-    if (!selectedModuleId) return;
+    // Each module rotates around its own center, so rotating a whole grid at
+    // once would make neighbors collide — restrict it to a single module
+    // until rotation accounts for the rest of the group's layout.
+    //
+    // TODO: possible future approach — rotate the whole selection together
+    // around the group's centroid (avg of all module centers) instead of each
+    // module's own center. That avoids neighbor-on-neighbor collisions, but
+    // for a rectangular grid on a rectangular roof it tends to swing the
+    // outer/"side" modules outside the roof outline, so it'd need a
+    // containment check (and probably a way to handle the rejection) before
+    // it's actually usable.
+    if (selectedModuleIds.length !== 1) return;
+    const [id] = selectedModuleIds;
     persistModules(
       modules.map((m) =>
-        m.id === selectedModuleId
-          ? { ...m, orientation: m.orientation === "portrait" ? "landscape" : "portrait" }
-          : m
+        m.id === id ? { ...m, orientation: m.orientation === "portrait" ? "landscape" : "portrait" } : m
       )
     );
   }
 
   function handleMoveSelected() {
-    const selected = modules.find((m) => m.id === selectedModuleId);
-    if (!selected) return;
-    setSelectedModuleId(null);
-    setPendingPlacement({
-      moduleTypeId: selected.moduleTypeId,
-      orientation: selected.orientation,
-      excludeModuleId: selected.id,
-    });
+    if (selectedModuleIds.length === 0) return;
+    const moduleIds = selectedModuleIds;
+    setSelectedModuleIds([]);
+    // Any member works as the anchor — it's just the reference point the
+    // translation line and delta are measured from, not special otherwise.
+    setPendingPlacement({ kind: "move", moduleIds, anchorModuleId: moduleIds[0] });
+  }
+
+  function handleGroupMoveResolved(results: GroupMoveResult[]) {
+    const byId = new Map(results.map((r) => [r.moduleId, r]));
+    persistModules(
+      modules.map((m) => {
+        const r = byId.get(m.id);
+        return r ? { ...m, roofId: r.roofId, x: r.x, y: r.y } : m;
+      })
+    );
+    setPendingPlacement(null);
   }
 
   function handleDeleteSelected() {
-    if (!selectedModuleId) return;
-    persistModules(modules.filter((m) => m.id !== selectedModuleId));
-    setSelectedModuleId(null);
+    if (selectedModuleIds.length === 0) return;
+    persistModules(modules.filter((m) => !selectedModuleIds.includes(m.id)));
+    setSelectedModuleIds([]);
   }
 
   return (
@@ -143,9 +219,11 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         moduleTypes={MODULE_TYPES}
         pendingPlacement={pendingPlacement}
         onPlacementResolved={handlePlacementResolved}
+        onGroupMoveResolved={handleGroupMoveResolved}
         onCancelPlacement={() => setPendingPlacement(null)}
-        selectedModuleId={selectedModuleId}
-        onSelectModule={setSelectedModuleId}
+        selectedModuleIds={selectedModuleIds}
+        onModuleClick={handleModuleClick}
+        onModuleDoubleClick={handleModuleDoubleClick}
       />
 
       {!center && (
@@ -167,18 +245,27 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         </button>
       </div>
 
-      {selectedModuleId && (
+      {selectedModuleIds.length > 0 && (
         <div className="module-controls">
-          <span>Module selected</span>
-          <button onClick={handleRotateSelected}>Rotate ↻</button>
-          <button onClick={handleMoveSelected}>Move</button>
-          <button className="link" onClick={handleDeleteSelected}>
-            Delete
+          <span>
+            {selectedModuleIds.length} module{selectedModuleIds.length === 1 ? "" : "s"} selected
+          </span>
+          <button onClick={handleRotateSelected} disabled={selectedModuleIds.length !== 1}>
+            Rotate ↻
           </button>
+          <button onClick={handleMoveSelected}>Move</button>
+          <button onClick={handleDeleteSelected}>Delete</button>
         </div>
       )}
 
-      <RoofList roofs={roofs} modules={modules} moduleTypes={MODULE_TYPES} onDelete={handleDeleteRoof} />
+      <RoofList
+        roofs={roofs}
+        modules={modules}
+        moduleTypes={MODULE_TYPES}
+        disabled={drawing || !!pendingPlacement}
+        onDelete={handleDeleteRoof}
+        onFill={handleFillRoof}
+      />
     </div>
   );
 }

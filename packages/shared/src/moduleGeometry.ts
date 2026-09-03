@@ -93,8 +93,23 @@ function aabb(x: number, y: number, w: number, h: number): Aabb {
   return { minX: x - w / 2, maxX: x + w / 2, minY: y - h / 2, maxY: y + h / 2 };
 }
 
+// Modules are routinely packed edge-to-edge with zero gap (Fill, grid
+// layouts in general), so two AABBs that are meant to just touch are common,
+// not an edge case. Round-tripping a position through lng/lat and back
+// introduces sub-micrometer floating-point noise, which is enough to flip an
+// exactly-touching pair into a falsely-detected overlap under a strict `<`.
+// Requiring the overlap to exceed a small real-world tolerance (well below
+// any meaningful physical overlap, comfortably above float noise) fixes that
+// without weakening genuine overlap detection.
+const OVERLAP_EPSILON_METERS = 0.001; // 1mm
+
 function overlaps(a: Aabb, b: Aabb): boolean {
-  return a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
+  return (
+    a.minX + OVERLAP_EPSILON_METERS < b.maxX &&
+    b.minX + OVERLAP_EPSILON_METERS < a.maxX &&
+    a.minY + OVERLAP_EPSILON_METERS < b.maxY &&
+    b.minY + OVERLAP_EPSILON_METERS < a.maxY
+  );
 }
 
 // Would a module of `orientation`/`moduleTypeId` at (x, y) on `roofId`
@@ -123,6 +138,160 @@ export function overlapsExisting(
       const { w, h } = effectiveSize(mType, m.orientation);
       return overlaps(target, aabb(m.x, m.y, w, h));
     });
+}
+
+// Fills a roof with as many non-overlapping modules as fit, packed
+// edge-to-edge in a simple grid aligned to the roof-local east/north axes
+// (modules don't rotate to match roof azimuth — see effectiveSize above).
+// Returns just the {x, y} anchor points (roof-local meters); the caller
+// assigns ids and builds full Module records, same as a manual placement.
+//
+// Containment is corner-only: a candidate is accepted if all four of its
+// corners land inside the roof outline. That's an approximation — a very
+// concave roof could let an edge bulge outside the boundary between two
+// corners without any single corner failing — but it's a solid trade for a
+// simple, fast fill on the roof shapes this app actually produces.
+export function fillRoofWithModules(
+  roof: Roof,
+  moduleType: ModuleType,
+  orientation: ModuleOrientation,
+  modules: Module[],
+  moduleTypes: ModuleType[]
+): { x: number; y: number }[] {
+  const origin = roofOrigin(roof);
+  const outlineRing = roof.roofOutline?.coordinates[0] as [number, number][] | undefined;
+  if (!origin || !outlineRing) return [];
+
+  // Work in the roof's local meters so the grid step and containment check
+  // don't need to round-trip through lng/lat for every candidate.
+  const localRing = outlineRing.map(([lng, lat]) => {
+    const p = lngLatToMeters(origin, { lng, lat });
+    return [p.x, p.y] as [number, number];
+  });
+
+  const { w, h } = effectiveSize(moduleType, orientation);
+  const xs = localRing.map(([x]) => x);
+  const ys = localRing.map(([, y]) => y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+
+  const existingAabbs: Aabb[] = [];
+  for (const m of modules) {
+    if (m.roofId !== roof.id) continue;
+    const mType = moduleTypes.find((t) => t.id === m.moduleTypeId);
+    if (!mType) continue;
+    const size = effectiveSize(mType, m.orientation);
+    existingAabbs.push(aabb(m.x, m.y, size.w, size.h));
+  }
+
+  const placed: { x: number; y: number }[] = [];
+  const placedAabbs: Aabb[] = [];
+
+  for (let y = minY + h / 2; y <= maxY - h / 2; y += h) {
+    for (let x = minX + w / 2; x <= maxX - w / 2; x += w) {
+      const corners: [number, number][] = [
+        [x - w / 2, y - h / 2],
+        [x + w / 2, y - h / 2],
+        [x + w / 2, y + h / 2],
+        [x - w / 2, y + h / 2],
+      ];
+      if (!corners.every((c) => pointInRing(c, localRing))) continue;
+
+      const candidate = aabb(x, y, w, h);
+      const collides = [...existingAabbs, ...placedAabbs].some((other) => overlaps(candidate, other));
+      if (collides) continue;
+
+      placed.push({ x, y });
+      placedAabbs.push(candidate);
+    }
+  }
+
+  return placed;
+}
+
+export interface GroupMoveResult {
+  moduleId: string;
+  roofId: string;
+  x: number;
+  y: number;
+}
+
+// Translates every module in `moduleIds` together by the same real-world
+// delta (anchor's current position -> targetLngLat), preserving their
+// relative layout — a rigid-body move, not independent per-module
+// placements. Each module lands on whatever roof its new position falls on
+// (not necessarily the same one for every module in the group). Returns
+// null if the move is invalid for ANY module — off every roof, or
+// overlapping something outside the moving group — since the whole move is
+// atomic, not partial.
+//
+// TODO: this is a stand-in for a real "pick up and carry" interaction —
+// see the OpenedProjectView notes on temporary drag state. For now the
+// group only ever "lands" once, on the second click; there's no live
+// per-module preview while the target is still being chosen.
+export function resolveGroupMove(
+  modules: Module[],
+  moduleTypes: ModuleType[],
+  roofs: Roof[],
+  moduleIds: string[],
+  anchorLngLat: LngLat,
+  targetLngLat: LngLat
+): GroupMoveResult[] | null {
+  const delta = lngLatToMeters(anchorLngLat, targetLngLat);
+  const movingSet = new Set(moduleIds);
+
+  const results: GroupMoveResult[] = [];
+  for (const id of moduleIds) {
+    const m = modules.find((mod) => mod.id === id);
+    const roof = m && roofs.find((r) => r.id === m.roofId);
+    const origin = roof && roofOrigin(roof);
+    if (!m || !roof || !origin) return null;
+
+    // Re-express this module's current position in the anchor's local
+    // frame, apply the shared delta, then convert back to lng/lat — that
+    // keeps every module's translation identical in real-world terms
+    // regardless of which roof (and therefore which local origin) it
+    // started on.
+    const currentLngLat = metersToLngLat(origin, m.x, m.y);
+    const currentInAnchorFrame = lngLatToMeters(anchorLngLat, currentLngLat);
+    const newLngLat = metersToLngLat(
+      anchorLngLat,
+      currentInAnchorFrame.x + delta.x,
+      currentInAnchorFrame.y + delta.y
+    );
+
+    const targetRoof = findContainingRoof(roofs, [newLngLat.lng, newLngLat.lat]);
+    const targetOrigin = targetRoof && roofOrigin(targetRoof);
+    if (!targetRoof || !targetOrigin) return null;
+
+    const { x, y } = lngLatToMeters(targetOrigin, newLngLat);
+    results.push({ moduleId: id, roofId: targetRoof.id, x, y });
+  }
+
+  // A rigid translation preserves each moving module's position relative to
+  // the others, so if they didn't overlap each other before the move, they
+  // won't after — only check against modules outside the moving group.
+  for (const r of results) {
+    const m = modules.find((mod) => mod.id === r.moduleId)!;
+    const type = moduleTypes.find((t) => t.id === m.moduleTypeId);
+    if (!type) return null;
+    const size = effectiveSize(type, m.orientation);
+    const target = aabb(r.x, r.y, size.w, size.h);
+
+    const collides = modules
+      .filter((other) => other.roofId === r.roofId && !movingSet.has(other.id))
+      .some((other) => {
+        const otherType = moduleTypes.find((t) => t.id === other.moduleTypeId);
+        if (!otherType) return false;
+        const otherSize = effectiveSize(otherType, other.orientation);
+        return overlaps(target, aabb(other.x, other.y, otherSize.w, otherSize.h));
+      });
+    if (collides) return null;
+  }
+
+  return results;
 }
 
 // The closed ring of a module's rectangle, in map lng/lat, ready to become a

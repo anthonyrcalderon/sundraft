@@ -2,14 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
+  type GroupMoveResult,
+  type LngLat,
   type Module,
   type ModuleOrientation,
   type ModuleType,
   type Roof,
   findContainingRoof,
   lngLatToMeters,
+  metersToLngLat,
   moduleRing,
   overlapsExisting,
+  resolveGroupMove,
   roofOrigin,
 } from "sundraft-shared";
 
@@ -44,16 +48,25 @@ const DRAFT_LINE_SOURCE_ID = "draft-line";
 const DRAFT_POINTS_SOURCE_ID = "draft-points";
 const MODULES_SOURCE_ID = "modules";
 const MODULES_FILL_LAYER_ID = "modules-fill";
+const TRANSLATE_LINE_SOURCE_ID = "translate-line";
 
 const emptyFC = (): GeoJSON.FeatureCollection => ({
   type: "FeatureCollection",
   features: [],
 });
 
-export interface PendingPlacement {
-  moduleTypeId: string;
-  orientation: ModuleOrientation;
-  excludeModuleId?: string; // set when repositioning an existing module
+export type PendingPlacement =
+  | { kind: "new"; moduleTypeId: string; orientation: ModuleOrientation }
+  | { kind: "move"; moduleIds: string[]; anchorModuleId: string };
+
+// A module's current real-world position — needed to anchor the group-move
+// translation line, and as the reference frame for resolveGroupMove.
+function moduleLngLat(modules: Module[], roofs: Roof[], moduleId: string): LngLat | null {
+  const m = modules.find((mod) => mod.id === moduleId);
+  const roof = m && roofs.find((r) => r.id === m.roofId);
+  const origin = roof && roofOrigin(roof);
+  if (!m || !origin) return null;
+  return metersToLngLat(origin, m.x, m.y);
 }
 
 interface Props {
@@ -66,9 +79,11 @@ interface Props {
   moduleTypes: ModuleType[];
   pendingPlacement: PendingPlacement | null;
   onPlacementResolved: (roofId: string, x: number, y: number) => void;
+  onGroupMoveResolved: (results: GroupMoveResult[]) => void;
   onCancelPlacement: () => void;
-  selectedModuleId: string | null;
-  onSelectModule: (id: string | null) => void;
+  selectedModuleIds: string[];
+  onModuleClick: (id: string | null, additive: boolean) => void;
+  onModuleDoubleClick: (roofId: string) => void;
 }
 
 export default function MapView({
@@ -81,15 +96,18 @@ export default function MapView({
   moduleTypes,
   pendingPlacement,
   onPlacementResolved,
+  onGroupMoveResolved,
   onCancelPlacement,
-  selectedModuleId,
-  onSelectModule,
+  selectedModuleIds,
+  onModuleClick,
+  onModuleDoubleClick,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [styleLoaded, setStyleLoaded] = useState(false);
   const [draftPoints, setDraftPoints] = useState<[number, number][]>([]);
   const [placementError, setPlacementError] = useState<string | null>(null);
+  const [mouseLngLat, setMouseLngLat] = useState<LngLat | null>(null);
 
   // Create the map once.
   useEffect(() => {
@@ -102,6 +120,13 @@ export default function MapView({
       zoom: center ? ADDRESS_ZOOM : DEFAULT_ZOOM,
     });
     map.addControl(new maplibregl.NavigationControl(), "top-right");
+    // Double-click means "select all modules on this roof" (see the dblclick
+    // handler below), not zoom.
+    map.doubleClickZoom.disable();
+    // Shift+click means "add to the module selection" (see the idle branch
+    // of the click handler below) — MapLibre's default shift+drag box-zoom
+    // would otherwise intercept shift-held clicks before they reach it.
+    map.boxZoom.disable();
 
     map.on("load", () => {
       map.addSource(ROOFS_SOURCE_ID, { type: "geojson", data: emptyFC() });
@@ -151,6 +176,17 @@ export default function MapView({
           "circle-stroke-color": "#333",
           "circle-stroke-width": 1,
         },
+      });
+
+      // Shared "translation" preview during a group move — one line from an
+      // anchor module's center to the cursor, standing in for the vector
+      // that'll be applied to every selected module on the next click.
+      map.addSource(TRANSLATE_LINE_SOURCE_ID, { type: "geojson", data: emptyFC() });
+      map.addLayer({
+        id: "translate-line",
+        type: "line",
+        source: TRANSLATE_LINE_SOURCE_ID,
+        paint: { "line-color": "#4caf50", "line-width": 2, "line-dasharray": [2, 2] },
       });
 
       setStyleLoaded(true);
@@ -203,22 +239,72 @@ export default function MapView({
     source?.setData({ type: "FeatureCollection", features });
   }, [modules, roofs, moduleTypes, styleLoaded]);
 
-  // Highlight the selected module.
+  // Highlight every selected module.
   useEffect(() => {
     if (!mapRef.current || !styleLoaded) return;
     mapRef.current.setPaintProperty("modules-outline", "line-color", [
       "case",
-      ["==", ["get", "id"], selectedModuleId ?? ""],
+      ["in", ["get", "id"], ["literal", selectedModuleIds]],
       "#4caf50",
       "#ffee58",
     ]);
     mapRef.current.setPaintProperty("modules-outline", "line-width", [
       "case",
-      ["==", ["get", "id"], selectedModuleId ?? ""],
+      ["in", ["get", "id"], ["literal", selectedModuleIds]],
       3,
       1,
     ]);
-  }, [selectedModuleId, styleLoaded]);
+  }, [selectedModuleIds, styleLoaded]);
+
+  // Track the cursor while a group move is pending, to drive the
+  // translation-preview line below.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || pendingPlacement?.kind !== "move") {
+      setMouseLngLat(null);
+      return;
+    }
+    function handleMouseMove(e: maplibregl.MapMouseEvent) {
+      setMouseLngLat({ lng: e.lngLat.lng, lat: e.lngLat.lat });
+    }
+    map.on("mousemove", handleMouseMove);
+    return () => {
+      map.off("mousemove", handleMouseMove);
+    };
+  }, [pendingPlacement]);
+
+  // Render the shared translation line: anchor module's center -> cursor.
+  useEffect(() => {
+    if (!mapRef.current || !styleLoaded) return;
+    const source = mapRef.current.getSource(TRANSLATE_LINE_SOURCE_ID) as maplibregl.GeoJSONSource;
+
+    const anchorLngLat =
+      pendingPlacement?.kind === "move"
+        ? moduleLngLat(modules, roofs, pendingPlacement.anchorModuleId)
+        : null;
+
+    if (!anchorLngLat || !mouseLngLat) {
+      source?.setData(emptyFC());
+      return;
+    }
+
+    source?.setData({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [anchorLngLat.lng, anchorLngLat.lat],
+              [mouseLngLat.lng, mouseLngLat.lat],
+            ],
+          },
+        },
+      ],
+    });
+  }, [pendingPlacement, mouseLngLat, modules, roofs, styleLoaded]);
 
   // Reset any in-progress trace/placement error when the relevant mode starts.
   useEffect(() => {
@@ -252,6 +338,28 @@ export default function MapView({
         return;
       }
 
+      if (pendingPlacement?.kind === "move") {
+        const anchorLngLat = moduleLngLat(modules, roofs, pendingPlacement.anchorModuleId);
+        if (!anchorLngLat) return;
+        const targetLngLat = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+        const results = resolveGroupMove(
+          modules,
+          moduleTypes,
+          roofs,
+          pendingPlacement.moduleIds,
+          anchorLngLat,
+          targetLngLat
+        );
+        if (!results) {
+          setPlacementError(
+            "That move would take a module off its roof or into an overlap — try a different spot"
+          );
+          return;
+        }
+        onGroupMoveResolved(results);
+        return;
+      }
+
       if (pendingPlacement) {
         const point: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         const roof = findContainingRoof(roofs, point);
@@ -262,18 +370,7 @@ export default function MapView({
         const origin = roofOrigin(roof);
         if (!origin) return;
         const { x, y } = lngLatToMeters(origin, { lng: point[0], lat: point[1] });
-        if (
-          overlapsExisting(
-            modules,
-            moduleTypes,
-            roof.id,
-            x,
-            y,
-            pendingPlacement.orientation,
-            pendingPlacement.moduleTypeId,
-            pendingPlacement.excludeModuleId
-          )
-        ) {
+        if (overlapsExisting(modules, moduleTypes, roof.id, x, y, pendingPlacement.orientation, pendingPlacement.moduleTypeId)) {
           setPlacementError("Modules can't overlap — try another spot");
           return;
         }
@@ -281,17 +378,57 @@ export default function MapView({
         return;
       }
 
-      // Idle: clicking a module selects it, clicking empty space deselects.
+      // Idle: clicking a module adds it to the selection (shift/ctrl/cmd
+      // removes an already-selected one). A miss — no module hit — clears
+      // the selection, unless it still lands inside the roof the current
+      // selection is already on: a near-miss next to a module you meant to
+      // click shouldn't cost you your selection.
       const hits = map!.queryRenderedFeatures(e.point, { layers: [MODULES_FILL_LAYER_ID] });
       const hitId = hits[0]?.properties?.id as string | undefined;
-      onSelectModule(hitId ?? null);
+      const additive = e.originalEvent.shiftKey || e.originalEvent.metaKey || e.originalEvent.ctrlKey;
+
+      if (!hitId && selectedModuleIds.length > 0) {
+        const selectionRoofId = modules.find((m) => m.id === selectedModuleIds[0])?.roofId;
+        const clickedRoof = findContainingRoof(roofs, [e.lngLat.lng, e.lngLat.lat]);
+        if (selectionRoofId && clickedRoof?.id === selectionRoofId) return;
+      }
+
+      onModuleClick(hitId ?? null, additive);
+    }
+
+    // Double-click a module to select every module on its roof — only makes
+    // sense in idle mode (not while tracing/placing/moving).
+    //
+    // TODO: once subarrays exist (see "Deferred: Subarrays" in
+    // docs/PROJECT-OVERVIEW.md), plain double-click should narrow to
+    // selecting the module's subarray instead, with this whole-roof
+    // behavior demoted to a modifier, e.g. shift+double-click — not dropped.
+    function handleDoubleClick(e: maplibregl.MapMouseEvent) {
+      if (drawing || pendingPlacement) return;
+      const hits = map!.queryRenderedFeatures(e.point, { layers: [MODULES_FILL_LAYER_ID] });
+      const hitId = hits[0]?.properties?.id as string | undefined;
+      const roofId = hitId ? modules.find((m) => m.id === hitId)?.roofId : undefined;
+      if (roofId) onModuleDoubleClick(roofId);
     }
 
     map.on("click", handleClick);
+    map.on("dblclick", handleDoubleClick);
     return () => {
       map.off("click", handleClick);
+      map.off("dblclick", handleDoubleClick);
     };
-  }, [drawing, pendingPlacement, roofs, modules, moduleTypes, onPlacementResolved, onSelectModule]);
+  }, [
+    drawing,
+    pendingPlacement,
+    roofs,
+    modules,
+    moduleTypes,
+    onPlacementResolved,
+    onGroupMoveResolved,
+    onModuleClick,
+    onModuleDoubleClick,
+    selectedModuleIds,
+  ]);
 
   // Render the in-progress trace (line between placed points + point markers).
   useEffect(() => {
@@ -349,8 +486,12 @@ export default function MapView({
         <div className="draw-toolbar">
           <span>
             {placementError ??
-              (pendingPlacement.excludeModuleId
-                ? "Click a new spot on a roof"
+              (pendingPlacement.kind === "move"
+                ? `Click where ${
+                    pendingPlacement.moduleIds.length === 1
+                      ? "this module"
+                      : `these ${pendingPlacement.moduleIds.length} modules`
+                  } should land`
                 : "Click inside a roof to place a module")}
           </span>
           <button onClick={onCancelPlacement}>Cancel</button>

@@ -34,7 +34,10 @@ interface Db {
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Default 100kb limit is easy to blow past once a project has more than a
+// couple hundred modules (e.g. after a roof auto-fill) — a real project
+// won't get anywhere near even this raised limit.
+app.use(express.json({ limit: "2mb" }));
 
 function readDb(): Db {
   return JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));

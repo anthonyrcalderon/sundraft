@@ -25,6 +25,15 @@ export interface ModuleType {
 // A module has no azimuth of its own — it's flush-mounted to whichever Roof
 // it belongs to and shares that roof's azimuth. Orientation only captures
 // how it's laid out relative to the roof, not which way it faces.
+//
+// TODO: eventually a Module needs to be able to carry Module Violations
+// (overlapping another module, falling outside its roof, etc.) so the UI can
+// flag it instead of just silently rejecting new invalid placements. Any
+// Module Violation also rolls up into a Design Violation (project-level, not
+// tied to one module — e.g. "zero modules placed") of the same severity —
+// see "Deferred: Module Violations & Design Violations" in
+// docs/PROJECT-OVERVIEW.md for the severity tiers (Fatal/Blocking/Advisory)
+// and the tradeoffs (mainly: avoiding a full re-validation pass on every edit).
 export interface Module {
   id: string;
   roofId: string;
