@@ -4,10 +4,12 @@ interface Props {
   roofs: Roof[];
   modules: Module[];
   moduleTypes: ModuleType[];
+  disabled: boolean;
   onDelete: (id: string) => void;
+  onFill: (id: string) => void;
 }
 
-export default function RoofList({ roofs, modules, moduleTypes, onDelete }: Props) {
+export default function RoofList({ roofs, modules, moduleTypes, disabled, onDelete, onFill }: Props) {
   if (roofs.length === 0) return null;
 
   return (
@@ -33,9 +35,14 @@ export default function RoofList({ roofs, modules, moduleTypes, onDelete }: Prop
                   </>
                 )}
               </span>
-              <button className="link" onClick={() => onDelete(r.id)}>
-                Delete
-              </button>
+              <span>
+                <button onClick={() => onFill(r.id)} disabled={disabled}>
+                  Fill
+                </button>
+                <button onClick={() => onDelete(r.id)} disabled={disabled}>
+                  Delete
+                </button>
+              </span>
             </li>
           );
         })}
