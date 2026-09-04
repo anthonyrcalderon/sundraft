@@ -39,3 +39,15 @@ Likely useful once it exists: bulk operations scoped to "this subarray" rather t
 A concrete motivating example — the reason this is being noted now rather than left implicit: double-click currently selects every module on the double-clicked module's *roof*. Once subarrays exist, double-click should narrow to selecting the double-clicked module's *subarray* instead (the finer-grained, more useful default), with the current whole-roof behavior demoted to a modifier — e.g. shift+double-click — rather than dropped. Whatever else changes about subarrays, this specific interaction mapping (double-click / modifier+double-click) should carry forward.
 
 Post-MVP, noting it now so the selection/grouping model (currently: roof-scoped only) has a known next step instead of needing to be reinvented later.
+
+## Roof outline drawing: future CAD-like tools
+
+Roof tracing already has a live dashed preview line from the last placed vertex to the cursor, which (both in the preview and on click) snaps onto the first vertex to close the loop, onto any vertex of any other existing roof (so adjacent roof sections can be traced edge-to-edge without gaps or overlap), and onto 45°-increment angles relative to the previous edge (the full 0/45/90/135/180/225/270/315 set — see `ANGLE_SNAP_DEGREES` in `frontend/src/components/MapView.tsx`).
+
+That's a reasonable stopping point for now. Further along, it's worth revisiting roof tracing as a small set of proper CAD-like tools rather than one-off snap rules — ideas worth keeping around for that pass:
+
+- **Edge-midpoint snapping** — extend the existing roof-vertex snap (`findNearbyRoofVertex`) to also snap onto the midpoint of an existing roof edge, not just its corners. Needs its own proximity target (computed per-edge, not just per-vertex), but slots into the same `snapDraftPoint` priority chain (vertex snap, then angle snap, then raw position) as one more candidate to check.
+- **Fillet** — round a sharp corner into a smooth arc of a given radius, connecting the two adjacent edges. Standard CAD operation; would need its own UI (select a vertex, adjust a radius) and a way to represent a rounded corner in the outline data, which is currently a plain straight-edged polygon.
+- **Autocomplete** — some form of smart inference while tracing (e.g. drag-a-rectangle-from-two-corners instead of clicking all four, or suggesting a shape based on what's already been traced). Vague on purpose — worth defining properly against real usage once the rest of the tracing UX has settled, rather than guessing now.
+
+Not scoped or prioritized relative to each other — just a holding pen for "roof tracing could eventually feel like a real CAD tool" ideas so they aren't lost.
