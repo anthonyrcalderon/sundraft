@@ -23,17 +23,24 @@ export interface LngLat {
   lat: number;
 }
 
-// The roof-local origin for meters<->lnglat conversion: the plain average
-// of the outline's vertices. Not a true polygon centroid, but close enough
-// at house scale, and cheap to recompute on every render instead of storing it.
-export function roofOrigin(roof: Roof): LngLat | null {
-  const ring = roof.roofOutline?.coordinates[0];
-  if (!ring || ring.length === 0) return null;
+// The local origin for meters<->lnglat conversion: the plain average of a
+// ring's vertices (closing point included, so it carries a hair more
+// weight than the rest — negligible at house scale). Not a true polygon
+// centroid, but close enough, and cheap to recompute on every render
+// instead of storing it.
+function ringOrigin(ring: [number, number][]): LngLat | null {
+  if (ring.length === 0) return null;
   const sum = ring.reduce(
     (acc, [lng, lat]) => ({ lng: acc.lng + lng, lat: acc.lat + lat }),
     { lng: 0, lat: 0 }
   );
   return { lng: sum.lng / ring.length, lat: sum.lat / ring.length };
+}
+
+export function roofOrigin(roof: Roof): LngLat | null {
+  const ring = roof.roofOutline?.coordinates[0] as [number, number][] | undefined;
+  if (!ring) return null;
+  return ringOrigin(ring);
 }
 
 export function metersToLngLat(origin: LngLat, x: number, y: number): LngLat {
@@ -71,6 +78,42 @@ export function findContainingRoof(roofs: Roof[], point: [number, number]): Roof
     if (ring && pointInRing(point, ring)) return roof;
   }
   return null;
+}
+
+// Derives a roof's azimuth (compass bearing, degrees clockwise from north)
+// from its own 2D outline, as a stand-in for real 3D roof-plane data (e.g.
+// from imagery) that would give this directly. Assumes the first edge drawn
+// is the roof's bottom (eave) edge, and points the azimuth perpendicular to
+// it, away from the outline's interior.
+export function deriveAzimuthFromOutline(outline: GeoJSON.Polygon): number {
+  const ring = outline.coordinates[0] as [number, number][];
+  const origin = ringOrigin(ring);
+  if (!origin || ring.length < 3) return 180; // not enough shape to derive a direction from
+
+  // Local east/north meters, so "perpendicular" and "away from center" are
+  // plain 2D vector math instead of lng/lat-flavored geometry.
+  const local = ring.map(([lng, lat]) => {
+    const p = lngLatToMeters(origin, { lng, lat });
+    return [p.x, p.y] as [number, number];
+  });
+
+  const [x0, y0] = local[0];
+  const [x1, y1] = local[1];
+  const midX = (x0 + x1) / 2;
+  const midY = (y0 + y1) / 2;
+  const edgeX = x1 - x0;
+  const edgeY = y1 - y0;
+
+  // The outline's centroid sits at the local origin (0, 0) by construction
+  // — see ringOrigin. Of the two directions perpendicular to the first
+  // edge, pick whichever points away from it.
+  const perp: [number, number] = [-edgeY, edgeX];
+  const towardCentroid: [number, number] = [-midX, -midY];
+  const dot = perp[0] * towardCentroid[0] + perp[1] * towardCentroid[1];
+  const away = dot < 0 ? perp : ([-perp[0], -perp[1]] as [number, number]);
+
+  const azimuthRad = Math.atan2(away[0], away[1]); // atan2(east, north) = bearing from north, clockwise
+  return Math.round(((azimuthRad * 180) / Math.PI + 360) % 360);
 }
 
 // Orientation only swaps which of the type's two dimensions is "up" —

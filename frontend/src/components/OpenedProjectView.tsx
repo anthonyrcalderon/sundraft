@@ -11,6 +11,7 @@ import type { GeocodeResult } from "../api/geocoding";
 import {
   DEFAULT_MODULE_TYPE,
   MODULE_TYPES,
+  deriveAzimuthFromOutline,
   fillRoofWithModules,
   type GroupMoveResult,
   type Module,
@@ -63,7 +64,9 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     const newRoof: Roof = {
       id: crypto.randomUUID(),
       roofOutline: outline,
-      azimuth: 180, // south-facing default — editing per-roof lands later
+      // Derived from the outline itself (first edge drawn = bottom/eave
+      // edge) until we have real 3D roof-plane data to pull this from.
+      azimuth: deriveAzimuthFromOutline(outline),
       tilt: 20, // moderate pitch default
     };
     persistRoofs([...roofs, newRoof]);
@@ -74,6 +77,10 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     persistRoofs(roofs.filter((r) => r.id !== id));
     // Modules only make sense attached to a roof — drop any that were on it.
     persistModules(modules.filter((m) => m.roofId !== id));
+  }
+
+  function handleUpdateRoof(id: string, changes: Partial<Pick<Roof, "tilt" | "azimuth">>) {
+    persistRoofs(roofs.map((r) => (r.id === id ? { ...r, ...changes } : r)));
   }
 
   function handleFillRoof(roofId: string) {
@@ -265,6 +272,7 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         disabled={drawing || !!pendingPlacement}
         onDelete={handleDeleteRoof}
         onFill={handleFillRoof}
+        onUpdate={handleUpdateRoof}
       />
     </div>
   );

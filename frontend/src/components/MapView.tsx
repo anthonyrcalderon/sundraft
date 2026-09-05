@@ -32,6 +32,16 @@ const ESRI_WORLD_IMAGERY_STYLE: maplibregl.StyleSpecification = {
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       ],
       tileSize: 256,
+      // Esri's real tile resolution varies a lot by location — dense
+      // US/urban areas often have true imagery well past this, but plenty
+      // of other areas top out lower. Without an explicit maxzoom, MapLibre
+      // keeps requesting real tiles at deeper zooms that may not exist for
+      // a given spot, which is what made zooming in feel like it hits a
+      // wall. Declaring one here tells MapLibre to stop requesting new
+      // tiles past it and instead "overzoom" — scale up the deepest tile it
+      // already has — so zooming stays smooth (just blurrier) everywhere,
+      // regardless of that location's actual coverage.
+      maxzoom: 19,
       attribution:
         "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community",
     },
