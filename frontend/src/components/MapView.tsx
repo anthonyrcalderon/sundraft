@@ -9,12 +9,11 @@ import {
   type ModuleType,
   type Roof,
   findContainingRoof,
-  lngLatToMeters,
-  metersToLngLat,
+  lngLatToModule,
   moduleRing,
+  moduleToLngLat,
   overlapsExisting,
   resolveGroupMove,
-  roofOrigin,
 } from "sundraft-shared";
 
 // Esri's public World Imagery tiles — free, no API key, no card, no signup.
@@ -80,9 +79,8 @@ export type PendingPlacement =
 function moduleLngLat(modules: Module[], roofs: Roof[], moduleId: string): LngLat | null {
   const m = modules.find((mod) => mod.id === moduleId);
   const roof = m && roofs.find((r) => r.id === m.roofId);
-  const origin = roof && roofOrigin(roof);
-  if (!m || !origin) return null;
-  return metersToLngLat(origin, m.x, m.y);
+  if (!m || !roof) return null;
+  return moduleToLngLat(roof, m.x, m.y);
 }
 
 // The closest vertex among every existing roof's outline to `screenPoint`,
@@ -488,9 +486,9 @@ export default function MapView({
           setPlacementError("Click inside a traced roof outline");
           return;
         }
-        const origin = roofOrigin(roof);
-        if (!origin) return;
-        const { x, y } = lngLatToMeters(origin, { lng: point[0], lat: point[1] });
+        const local = lngLatToModule(roof, { lng: point[0], lat: point[1] });
+        if (!local) return;
+        const { x, y } = local;
         if (overlapsExisting(modules, moduleTypes, roof.id, x, y, pendingPlacement.orientation, pendingPlacement.moduleTypeId)) {
           setPlacementError("Modules can't overlap — try another spot");
           return;

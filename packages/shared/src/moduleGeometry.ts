@@ -57,6 +57,46 @@ export function lngLatToMeters(origin: LngLat, point: LngLat): { x: number; y: n
   };
 }
 
+// Rotates a point from a roof's own local frame (x = across the roof face,
+// y = "up" the roof face, i.e. along the azimuth direction) into plain
+// east/north meters relative to the roof's origin.
+function rotateForAzimuth(x: number, y: number, azimuthDeg: number): { x: number; y: number } {
+  const theta = (azimuthDeg * Math.PI) / 180;
+  const c = Math.cos(theta);
+  const s = Math.sin(theta);
+  return { x: x * c + y * s, y: -x * s + y * c };
+}
+
+// The inverse of rotateForAzimuth: plain east/north meters -> the roof's
+// own local (across-the-face, up-the-face) frame.
+function unrotateForAzimuth(x: number, y: number, azimuthDeg: number): { x: number; y: number } {
+  const theta = (azimuthDeg * Math.PI) / 180;
+  const c = Math.cos(theta);
+  const s = Math.sin(theta);
+  return { x: x * c - y * s, y: x * s + y * c };
+}
+
+// A module's real-world position, given its coordinates in its roof's own
+// local frame (not plain east/north — see rotateForAzimuth). Modules are
+// stored rotated to their roof's azimuth rather than to compass north, so a
+// "portrait" panel visually runs up the slope of whichever roof it's on,
+// instead of always pointing due north regardless of the roof beneath it.
+export function moduleToLngLat(roof: Roof, x: number, y: number): LngLat | null {
+  const origin = roofOrigin(roof);
+  if (!origin) return null;
+  const plain = rotateForAzimuth(x, y, roof.azimuth);
+  return metersToLngLat(origin, plain.x, plain.y);
+}
+
+// The inverse of moduleToLngLat: a real-world position, converted into the
+// given roof's local frame, ready to store as a Module's x/y.
+export function lngLatToModule(roof: Roof, point: LngLat): { x: number; y: number } | null {
+  const origin = roofOrigin(roof);
+  if (!origin) return null;
+  const plain = lngLatToMeters(origin, point);
+  return unrotateForAzimuth(plain.x, plain.y, roof.azimuth);
+}
+
 // Ray-casting point-in-polygon test. Purely topological, so it works the
 // same in lng/lat as it would in any consistent 2D coordinate space.
 export function pointInRing(point: [number, number], ring: [number, number][]): boolean {
@@ -184,10 +224,12 @@ export function overlapsExisting(
 }
 
 // Fills a roof with as many non-overlapping modules as fit, packed
-// edge-to-edge in a simple grid aligned to the roof-local east/north axes
-// (modules don't rotate to match roof azimuth — see effectiveSize above).
-// Returns just the {x, y} anchor points (roof-local meters); the caller
-// assigns ids and builds full Module records, same as a manual placement.
+// edge-to-edge in a simple grid aligned to the roof's own azimuth-rotated
+// axes (see rotateForAzimuth) — rows run along the roof's facing direction,
+// like a real solar array, rather than along compass east/north regardless
+// of which way the roof faces. Returns just the {x, y} anchor points (in
+// that same roof-local frame); the caller assigns ids and builds full
+// Module records, same as a manual placement.
 //
 // Containment is corner-only: a candidate is accepted if all four of its
 // corners land inside the roof outline. That's an approximation — a very
@@ -205,11 +247,14 @@ export function fillRoofWithModules(
   const outlineRing = roof.roofOutline?.coordinates[0] as [number, number][] | undefined;
   if (!origin || !outlineRing) return [];
 
-  // Work in the roof's local meters so the grid step and containment check
-  // don't need to round-trip through lng/lat for every candidate.
+  // Work in the roof's own local (azimuth-rotated) frame so the grid step
+  // and containment check don't need to round-trip through lng/lat for
+  // every candidate, and so the positions generated are directly valid
+  // Module.x/y values in that same frame.
   const localRing = outlineRing.map(([lng, lat]) => {
-    const p = lngLatToMeters(origin, { lng, lat });
-    return [p.x, p.y] as [number, number];
+    const plain = lngLatToMeters(origin, { lng, lat });
+    const rotated = unrotateForAzimuth(plain.x, plain.y, roof.azimuth);
+    return [rotated.x, rotated.y] as [number, number];
   });
 
   const { w, h } = effectiveSize(moduleType, orientation);
@@ -289,15 +334,15 @@ export function resolveGroupMove(
   for (const id of moduleIds) {
     const m = modules.find((mod) => mod.id === id);
     const roof = m && roofs.find((r) => r.id === m.roofId);
-    const origin = roof && roofOrigin(roof);
-    if (!m || !roof || !origin) return null;
+    if (!m || !roof) return null;
 
-    // Re-express this module's current position in the anchor's local
-    // frame, apply the shared delta, then convert back to lng/lat — that
-    // keeps every module's translation identical in real-world terms
-    // regardless of which roof (and therefore which local origin) it
+    // Re-express this module's current real-world position in the anchor's
+    // local frame, apply the shared delta, then convert back to lng/lat —
+    // that keeps every module's translation identical in real-world terms
+    // regardless of which roof (and therefore which origin/azimuth) it
     // started on.
-    const currentLngLat = metersToLngLat(origin, m.x, m.y);
+    const currentLngLat = moduleToLngLat(roof, m.x, m.y);
+    if (!currentLngLat) return null;
     const currentInAnchorFrame = lngLatToMeters(anchorLngLat, currentLngLat);
     const newLngLat = metersToLngLat(
       anchorLngLat,
@@ -306,11 +351,13 @@ export function resolveGroupMove(
     );
 
     const targetRoof = findContainingRoof(roofs, [newLngLat.lng, newLngLat.lat]);
-    const targetOrigin = targetRoof && roofOrigin(targetRoof);
-    if (!targetRoof || !targetOrigin) return null;
+    if (!targetRoof) return null;
+    // Rotated into the target roof's own frame — which may have a
+    // different azimuth than the roof the module started on.
+    const local = lngLatToModule(targetRoof, newLngLat);
+    if (!local) return null;
 
-    const { x, y } = lngLatToMeters(targetOrigin, newLngLat);
-    results.push({ moduleId: id, roofId: targetRoof.id, x, y });
+    results.push({ moduleId: id, roofId: targetRoof.id, x: local.x, y: local.y });
   }
 
   // A rigid translation preserves each moving module's position relative to
@@ -338,10 +385,10 @@ export function resolveGroupMove(
 }
 
 // The closed ring of a module's rectangle, in map lng/lat, ready to become a
-// GeoJSON Polygon.
+// GeoJSON Polygon. Rotated to the roof's azimuth (via moduleToLngLat), so a
+// portrait panel renders running up the slope of its own roof rather than
+// always pointing due north.
 export function moduleRing(roof: Roof, module: Module, type: ModuleType): [number, number][] | null {
-  const origin = roofOrigin(roof);
-  if (!origin) return null;
   const { w, h } = effectiveSize(type, module.orientation);
   const corners: [number, number][] = [
     [module.x - w / 2, module.y - h / 2],
@@ -350,8 +397,11 @@ export function moduleRing(roof: Roof, module: Module, type: ModuleType): [numbe
     [module.x - w / 2, module.y + h / 2],
     [module.x - w / 2, module.y - h / 2],
   ];
-  return corners.map(([x, y]) => {
-    const ll = metersToLngLat(origin, x, y);
-    return [ll.lng, ll.lat];
-  });
+  const ring: [number, number][] = [];
+  for (const [x, y] of corners) {
+    const ll = moduleToLngLat(roof, x, y);
+    if (!ll) return null;
+    ring.push([ll.lng, ll.lat]);
+  }
+  return ring;
 }
