@@ -185,6 +185,8 @@ interface Props {
   selectedModuleIds: string[];
   onModuleClick: (id: string | null, additive: boolean) => void;
   onModuleDoubleClick: (roofId: string) => void;
+  selectedRoofId: string | null;
+  onRoofClick: (id: string) => void;
 }
 
 export default function MapView({
@@ -202,6 +204,8 @@ export default function MapView({
   selectedModuleIds,
   onModuleClick,
   onModuleDoubleClick,
+  selectedRoofId,
+  onRoofClick,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -357,6 +361,33 @@ export default function MapView({
     ]);
   }, [selectedModuleIds, styleLoaded]);
 
+  // Highlight the selected roof. Uses a distinct hue (orange -> teal, not
+  // just a lighter/darker orange) plus a visibly thicker outline, so the
+  // selection doesn't rely on color alone — orange/teal also stays
+  // distinguishable under the common red-green color-vision deficiencies,
+  // unlike an orange/green pairing would.
+  useEffect(() => {
+    if (!mapRef.current || !styleLoaded) return;
+    mapRef.current.setPaintProperty("roofs-fill", "fill-color", [
+      "case",
+      ["==", ["get", "id"], selectedRoofId ?? ""],
+      "#00acc1",
+      "#ff9800",
+    ]);
+    mapRef.current.setPaintProperty("roofs-outline", "line-color", [
+      "case",
+      ["==", ["get", "id"], selectedRoofId ?? ""],
+      "#00838f",
+      "#ff9800",
+    ]);
+    mapRef.current.setPaintProperty("roofs-outline", "line-width", [
+      "case",
+      ["==", ["get", "id"], selectedRoofId ?? ""],
+      4,
+      2,
+    ]);
+  }, [selectedRoofId, styleLoaded]);
+
   // Track the cursor while a group move is pending or a roof is being
   // traced, to drive the preview lines below.
   useEffect(() => {
@@ -489,7 +520,7 @@ export default function MapView({
         const local = lngLatToModule(roof, { lng: point[0], lat: point[1] });
         if (!local) return;
         const { x, y } = local;
-        if (overlapsExisting(modules, moduleTypes, roof.id, x, y, pendingPlacement.orientation, pendingPlacement.moduleTypeId)) {
+        if (overlapsExisting(modules, moduleTypes, roof.id, x, y, pendingPlacement.orientation, pendingPlacement.moduleTypeId, roof.tilt)) {
           setPlacementError("Modules can't overlap — try another spot");
           return;
         }
@@ -498,21 +529,26 @@ export default function MapView({
       }
 
       // Idle: clicking a module adds it to the selection (shift/ctrl/cmd
-      // removes an already-selected one). A miss — no module hit — clears
-      // the selection, unless it still lands inside the roof the current
-      // selection is already on: a near-miss next to a module you meant to
-      // click shouldn't cost you your selection.
+      // removes an already-selected one) and clears any roof selection.
+      // Missing every module but still landing inside a roof selects that
+      // roof instead (toggling it off if it's already selected) and clears
+      // module selection. Missing everything clears both.
       const hits = map!.queryRenderedFeatures(e.point, { layers: [MODULES_FILL_LAYER_ID] });
       const hitId = hits[0]?.properties?.id as string | undefined;
-      const additive = e.originalEvent.shiftKey || e.originalEvent.metaKey || e.originalEvent.ctrlKey;
 
-      if (!hitId && selectedModuleIds.length > 0) {
-        const selectionRoofId = modules.find((m) => m.id === selectedModuleIds[0])?.roofId;
-        const clickedRoof = findContainingRoof(roofs, [e.lngLat.lng, e.lngLat.lat]);
-        if (selectionRoofId && clickedRoof?.id === selectionRoofId) return;
+      if (hitId) {
+        const additive = e.originalEvent.shiftKey || e.originalEvent.metaKey || e.originalEvent.ctrlKey;
+        onModuleClick(hitId, additive);
+        return;
       }
 
-      onModuleClick(hitId ?? null, additive);
+      const clickedRoof = findContainingRoof(roofs, [e.lngLat.lng, e.lngLat.lat]);
+      if (clickedRoof) {
+        onRoofClick(clickedRoof.id);
+        return;
+      }
+
+      onModuleClick(null, false);
     }
 
     // Double-click a module to select every module on its roof — only makes
@@ -546,7 +582,7 @@ export default function MapView({
     onGroupMoveResolved,
     onModuleClick,
     onModuleDoubleClick,
-    selectedModuleIds,
+    onRoofClick,
     draftPoints,
   ]);
 

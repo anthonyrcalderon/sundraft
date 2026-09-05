@@ -156,13 +156,24 @@ export function deriveAzimuthFromOutline(outline: GeoJSON.Polygon): number {
   return Math.round(((azimuthRad * 180) / Math.PI + 360) % 360);
 }
 
-// Orientation only swaps which of the type's two dimensions is "up" —
-// modules have no rotation of their own beyond that (see ADR discussion:
-// azimuth belongs to the roof, not the module).
-function effectiveSize(type: ModuleType, orientation: ModuleOrientation) {
+// Orientation swaps which of the type's two physical dimensions runs "up"
+// the roof (h, the roof-local y-axis — see rotateForAzimuth) versus across
+// it (w). A module's width/height are its true, flat panel dimensions, but
+// the roof outline itself was traced from directly overhead — the same
+// reason true slope length can't be recovered from a traced outline (see
+// docs/FUTURE-NOTES.md's tilt discussion) means a tilted roof's up-slope
+// direction is foreshortened in that same top-down view. Scaling h by
+// cos(tilt) keeps a module's footprint in the same projected units as the
+// roof outline it has to fit inside: flat (0° tilt) applies no
+// foreshortening; a steeper tilt shrinks the up-slope dimension further,
+// down toward zero as the roof approaches vertical. The across-the-roof
+// dimension (w) isn't foreshortened — a horizontal line on a tilted plane
+// still looks full-length from above.
+function effectiveSize(type: ModuleType, orientation: ModuleOrientation, tiltDeg: number) {
+  const foreshorten = Math.cos((tiltDeg * Math.PI) / 180);
   return orientation === "portrait"
-    ? { w: type.width, h: type.height }
-    : { w: type.height, h: type.width };
+    ? { w: type.width, h: type.height * foreshorten }
+    : { w: type.height, h: type.width * foreshorten };
 }
 
 interface Aabb {
@@ -195,9 +206,9 @@ function overlaps(a: Aabb, b: Aabb): boolean {
   );
 }
 
-// Would a module of `orientation`/`moduleTypeId` at (x, y) on `roofId`
-// overlap any other module already on that roof? `excludeModuleId` lets a
-// module being moved skip colliding with its own current position.
+// Would a module of `orientation`/`moduleTypeId` at (x, y) on a roof with
+// `tiltDeg` overlap any other module already on that roof? `excludeModuleId`
+// lets a module being moved skip colliding with its own current position.
 export function overlapsExisting(
   modules: Module[],
   moduleTypes: ModuleType[],
@@ -206,11 +217,12 @@ export function overlapsExisting(
   y: number,
   orientation: ModuleOrientation,
   moduleTypeId: string,
+  tiltDeg: number,
   excludeModuleId?: string
 ): boolean {
   const type = moduleTypes.find((t) => t.id === moduleTypeId);
   if (!type) return false;
-  const targetSize = effectiveSize(type, orientation);
+  const targetSize = effectiveSize(type, orientation, tiltDeg);
   const target = aabb(x, y, targetSize.w, targetSize.h);
 
   return modules
@@ -218,7 +230,7 @@ export function overlapsExisting(
     .some((m) => {
       const mType = moduleTypes.find((t) => t.id === m.moduleTypeId);
       if (!mType) return false;
-      const { w, h } = effectiveSize(mType, m.orientation);
+      const { w, h } = effectiveSize(mType, m.orientation, tiltDeg);
       return overlaps(target, aabb(m.x, m.y, w, h));
     });
 }
@@ -257,7 +269,7 @@ export function fillRoofWithModules(
     return [rotated.x, rotated.y] as [number, number];
   });
 
-  const { w, h } = effectiveSize(moduleType, orientation);
+  const { w, h } = effectiveSize(moduleType, orientation, roof.tilt);
   const xs = localRing.map(([x]) => x);
   const ys = localRing.map(([, y]) => y);
   const minX = Math.min(...xs);
@@ -270,7 +282,7 @@ export function fillRoofWithModules(
     if (m.roofId !== roof.id) continue;
     const mType = moduleTypes.find((t) => t.id === m.moduleTypeId);
     if (!mType) continue;
-    const size = effectiveSize(mType, m.orientation);
+    const size = effectiveSize(mType, m.orientation, roof.tilt);
     existingAabbs.push(aabb(m.x, m.y, size.w, size.h));
   }
 
@@ -366,8 +378,9 @@ export function resolveGroupMove(
   for (const r of results) {
     const m = modules.find((mod) => mod.id === r.moduleId)!;
     const type = moduleTypes.find((t) => t.id === m.moduleTypeId);
-    if (!type) return null;
-    const size = effectiveSize(type, m.orientation);
+    const targetRoofTilt = roofs.find((rf) => rf.id === r.roofId)?.tilt;
+    if (!type || targetRoofTilt === undefined) return null;
+    const size = effectiveSize(type, m.orientation, targetRoofTilt);
     const target = aabb(r.x, r.y, size.w, size.h);
 
     const collides = modules
@@ -375,7 +388,7 @@ export function resolveGroupMove(
       .some((other) => {
         const otherType = moduleTypes.find((t) => t.id === other.moduleTypeId);
         if (!otherType) return false;
-        const otherSize = effectiveSize(otherType, other.orientation);
+        const otherSize = effectiveSize(otherType, other.orientation, targetRoofTilt);
         return overlaps(target, aabb(other.x, other.y, otherSize.w, otherSize.h));
       });
     if (collides) return null;
@@ -387,9 +400,11 @@ export function resolveGroupMove(
 // The closed ring of a module's rectangle, in map lng/lat, ready to become a
 // GeoJSON Polygon. Rotated to the roof's azimuth (via moduleToLngLat), so a
 // portrait panel renders running up the slope of its own roof rather than
-// always pointing due north.
+// always pointing due north, and foreshortened by the roof's tilt (see
+// effectiveSize) so a steeply-pitched roof's modules render visibly
+// shorter along that same up-slope axis.
 export function moduleRing(roof: Roof, module: Module, type: ModuleType): [number, number][] | null {
-  const { w, h } = effectiveSize(type, module.orientation);
+  const { w, h } = effectiveSize(type, module.orientation, roof.tilt);
   const corners: [number, number][] = [
     [module.x - w / 2, module.y - h / 2],
     [module.x + w / 2, module.y - h / 2],
