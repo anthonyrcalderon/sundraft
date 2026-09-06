@@ -345,14 +345,68 @@ interface BoxSelect {
 }
 
 // A group-move drag in progress: every module riding along (the whole
-// current selection, snapshotted at mousedown so it can't change mid-drag)
-// and where the drag started — resolveGroupMove only needs that start
-// point and the current cursor position to compute the shared real-world
-// translation, not which module was actually grabbed.
+// current selection, snapshotted at mousedown so it can't change mid-drag),
+// where the drag started, and which one was actually grabbed — that one is
+// checked against every other module's adjacent slots (see
+// snapToAdjacentModule) so the whole group can snap into place the same way
+// a new module snaps while being placed, with the rest of the group rigidly
+// along for the ride.
 interface ModuleDrag {
   moduleIds: string[];
+  grabbedModuleId: string;
   startLngLat: LngLat;
   startScreen: { x: number; y: number };
+}
+
+// Where a group-move drag's rigid translation actually goes, as an
+// anchor/target pair ready for resolveGroupMove (and for the live preview,
+// which just needs their meters delta) — the grabbed module's own current
+// position and where it lands once the raw mouse-driven target snaps onto a
+// nearby module's adjacent slot, exactly like a new module placement snaps
+// (see snapToAdjacentModule). Snapping only ever considers modules outside
+// the dragged group — a module can't snap to itself or to another one
+// riding along with it. Every other module in the group is translated by
+// this same anchor->target delta, which is what keeps the whole group
+// rigid: the grabbed module's snap becomes the group's snap.
+function resolveDragTarget(
+  moduleDrag: ModuleDrag,
+  modules: Module[],
+  moduleTypes: ModuleType[],
+  roofs: Roof[],
+  currentLngLat: LngLat
+): { anchorLngLat: LngLat; targetLngLat: LngLat } | null {
+  const grabbed = modules.find((m) => m.id === moduleDrag.grabbedModuleId);
+  const roof = grabbed && roofs.find((r) => r.id === grabbed.roofId);
+  if (!grabbed || !roof) return null;
+
+  const anchorLngLat = moduleToLngLat(roof, grabbed.x, grabbed.y);
+  if (!anchorLngLat) return null;
+
+  // The grabbed module's position under the raw (unsnapped) mouse delta,
+  // re-expressed in its own roof's local frame so it can be checked against
+  // that roof's other modules the same way a new placement would be.
+  const rawDelta = lngLatToMeters(moduleDrag.startLngLat, currentLngLat);
+  const rawTargetLngLat = metersToLngLat(anchorLngLat, rawDelta.x, rawDelta.y);
+  const rawLocal = lngLatToModule(roof, rawTargetLngLat);
+  if (!rawLocal) return null;
+
+  const others = modules.filter((m) => !moduleDrag.moduleIds.includes(m.id));
+  const snapped = snapToAdjacentModule(
+    others,
+    moduleTypes,
+    roof.id,
+    rawLocal.x,
+    rawLocal.y,
+    grabbed.orientation,
+    grabbed.moduleTypeId,
+    roof.tilt
+  );
+
+  const finalLocal = snapped ?? rawLocal;
+  const targetLngLat = moduleToLngLat(roof, finalLocal.x, finalLocal.y);
+  if (!targetLngLat) return null;
+
+  return { anchorLngLat, targetLngLat };
 }
 
 export default function MapView({
@@ -513,16 +567,17 @@ export default function MapView({
   }, [roofs, styleLoaded]);
 
   // Keep placed modules in sync with the source of truth. While a group is
-  // being dragged, its members are drawn translated to the cursor's current
-  // offset from the drag's start — the same rigid, real-world-meters
-  // translation resolveGroupMove will actually apply on release — so the
-  // move is visible happening live instead of only jumping once dropped.
+  // being dragged, its members are drawn translated by the same
+  // anchor->target delta resolveGroupMove will actually apply on release —
+  // snap included — so the move (and the snap) is visible happening live
+  // instead of only appearing once dropped.
   useEffect(() => {
     if (!mapRef.current || !styleLoaded) return;
     const source = mapRef.current.getSource(MODULES_SOURCE_ID) as maplibregl.GeoJSONSource;
 
-    const dragDelta =
-      moduleDrag && mouseLngLat ? lngLatToMeters(moduleDrag.startLngLat, mouseLngLat) : null;
+    const dragResolution =
+      moduleDrag && mouseLngLat ? resolveDragTarget(moduleDrag, modules, moduleTypes, roofs, mouseLngLat) : null;
+    const dragDelta = dragResolution && lngLatToMeters(dragResolution.anchorLngLat, dragResolution.targetLngLat);
 
     const features: GeoJSON.Feature[] = [];
     for (const m of modules) {
@@ -533,9 +588,10 @@ export default function MapView({
       if (!ring) continue;
 
       if (dragDelta && moduleDrag!.moduleIds.includes(m.id)) {
+        const anchorLngLat = dragResolution!.anchorLngLat;
         ring = ring.map(([lng, lat]) => {
-          const relative = lngLatToMeters(moduleDrag!.startLngLat, { lng, lat });
-          const shifted = metersToLngLat(moduleDrag!.startLngLat, relative.x + dragDelta.x, relative.y + dragDelta.y);
+          const relative = lngLatToMeters(anchorLngLat, { lng, lat });
+          const shifted = metersToLngLat(anchorLngLat, relative.x + dragDelta.x, relative.y + dragDelta.y);
           return [shifted.lng, shifted.lat];
         });
       }
@@ -781,6 +837,7 @@ export default function MapView({
         setPlacementError(null);
         setModuleDrag({
           moduleIds: selectedModuleIds,
+          grabbedModuleId: hitId,
           startLngLat: { lng: e.lngLat.lng, lat: e.lngLat.lat },
           startScreen: { x: e.point.x, y: e.point.y },
         });
@@ -810,8 +867,19 @@ export default function MapView({
         const dragDistance = e.point.dist(new maplibregl.Point(moduleDrag.startScreen.x, moduleDrag.startScreen.y));
         if (dragDistance < DRAG_MIN_PX) return;
 
-        const targetLngLat = { lng: e.lngLat.lng, lat: e.lngLat.lat };
-        const results = resolveGroupMove(modules, moduleTypes, roofs, moduleDrag.moduleIds, moduleDrag.startLngLat, targetLngLat);
+        const resolution = resolveDragTarget(moduleDrag, modules, moduleTypes, roofs, {
+          lng: e.lngLat.lng,
+          lat: e.lngLat.lat,
+        });
+        if (!resolution) return;
+        const results = resolveGroupMove(
+          modules,
+          moduleTypes,
+          roofs,
+          moduleDrag.moduleIds,
+          resolution.anchorLngLat,
+          resolution.targetLngLat
+        );
         if (!results) {
           setPlacementError("That move would take a module off its roof or into an overlap — try a different spot");
           return;

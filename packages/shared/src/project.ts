@@ -43,6 +43,13 @@ export interface Module {
   orientation: ModuleOrientation;
 }
 
+// The name a newly created (not yet renamed) project starts with. Also the
+// sentinel a project's current name is checked against to decide whether
+// setting its address should auto-name it too — once a project has any
+// other name (renamed manually, or already auto-named from an address),
+// picking a different address leaves the name alone.
+export const DEFAULT_PROJECT_NAME = "Untitled design";
+
 export interface Project {
   id: string;
   sessionId: string | null;

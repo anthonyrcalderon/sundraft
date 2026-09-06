@@ -11,7 +11,7 @@ import { nanoid } from "nanoid";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Project } from "sundraft-shared";
+import { DEFAULT_PROJECT_NAME, type Project } from "sundraft-shared";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, "db.json");
@@ -92,7 +92,7 @@ app.post("/api/projects", (req: Request, res: Response) => {
     id: nanoid(10),
     sessionId,
     isTemplate: false,
-    name: req.body.name || "Untitled design",
+    name: req.body.name || DEFAULT_PROJECT_NAME,
     address: req.body.address || null,
     lat: req.body.lat ?? null,
     lng: req.body.lng ?? null,

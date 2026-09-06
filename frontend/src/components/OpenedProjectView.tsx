@@ -3,13 +3,15 @@ import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../app/store";
 import {
   updateProjectAddress,
+  updateProjectName,
   updateProjectRoofs,
   updateProjectModules,
 } from "../features/projects/projectsSlice";
 import type { Project } from "../api/client";
-import type { GeocodeResult } from "../api/geocoding";
+import { streetAddressFromPlaceName, type GeocodeResult } from "../api/geocoding";
 import {
   DEFAULT_MODULE_TYPE,
+  DEFAULT_PROJECT_NAME,
   MODULE_TYPES,
   deriveAzimuthFromOutline,
   fillRoofWithModules,
@@ -29,6 +31,7 @@ interface Props {
 
 export default function OpenedProjectView({ project, onBack }: Props) {
   const dispatch = useDispatch<AppDispatch>();
+  const [name, setName] = useState(project.name);
   const [center, setCenter] = useState<{ lng: number; lat: number } | null>(
     project.lat != null && project.lng != null
       ? { lat: project.lat, lng: project.lng }
@@ -70,6 +73,19 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         lng: result.lng,
       })
     );
+    // Still on the default name (never renamed, and no earlier address
+    // already named it) — the address the project is actually about is a
+    // far more useful title than a generic placeholder.
+    if (name === DEFAULT_PROJECT_NAME) {
+      persistName(streetAddressFromPlaceName(result.placeName));
+    }
+  }
+
+  function persistName(next: string) {
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === name) return;
+    setName(trimmed);
+    dispatch(updateProjectName({ id: project.id, name: trimmed }));
   }
 
   function persistRoofs(next: Roof[]) {
@@ -261,9 +277,25 @@ export default function OpenedProjectView({ project, onBack }: Props) {
       <button className="link" onClick={onBack}>
         ← Back to projects
       </button>
-      <h1>{project.name}</h1>
+      <input
+        key={name}
+        className="project-name-input"
+        defaultValue={name}
+        onBlur={(e) => persistName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
+        aria-label="Project name"
+      />
 
-      <AddressSearch onSelect={handleAddressSelect} />
+      {roofs.length === 0 ? (
+        <AddressSearch onSelect={handleAddressSelect} />
+      ) : (
+        <p className="muted small">
+          Address locked once a roof is traced — a project's roofs all need to
+          be on the same site.
+        </p>
+      )}
 
       <MapView
         center={center}
