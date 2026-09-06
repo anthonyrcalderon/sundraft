@@ -9,12 +9,11 @@ import {
   type ModuleType,
   type Roof,
   findContainingRoof,
-  lngLatToMeters,
-  metersToLngLat,
+  lngLatToModule,
   moduleRing,
+  moduleToLngLat,
   overlapsExisting,
   resolveGroupMove,
-  roofOrigin,
 } from "sundraft-shared";
 
 // Esri's public World Imagery tiles — free, no API key, no card, no signup.
@@ -32,6 +31,16 @@ const ESRI_WORLD_IMAGERY_STYLE: maplibregl.StyleSpecification = {
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       ],
       tileSize: 256,
+      // Esri's real tile resolution varies a lot by location — dense
+      // US/urban areas often have true imagery well past this, but plenty
+      // of other areas top out lower. Without an explicit maxzoom, MapLibre
+      // keeps requesting real tiles at deeper zooms that may not exist for
+      // a given spot, which is what made zooming in feel like it hits a
+      // wall. Declaring one here tells MapLibre to stop requesting new
+      // tiles past it and instead "overzoom" — scale up the deepest tile it
+      // already has — so zooming stays smooth (just blurrier) everywhere,
+      // regardless of that location's actual coverage.
+      maxzoom: 19,
       attribution:
         "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community",
     },
@@ -42,10 +51,33 @@ const ESRI_WORLD_IMAGERY_STYLE: maplibregl.StyleSpecification = {
 const DEFAULT_CENTER: [number, number] = [-98.5795, 39.8283]; // center of the continental US
 const DEFAULT_ZOOM = 3.5;
 const ADDRESS_ZOOM = 19; // close enough to make out individual roofs
+const SNAP_PX = 15; // click/cursor proximity (screen pixels) that triggers a snap while tracing a roof
+// Candidate angles (degrees) an in-progress edge can snap to, measured
+// relative to the previous edge's direction — 0/180 for a straight
+// continuation, 90/270 for a square corner, 45/135/225/315 for diagonals.
+const ANGLE_SNAP_DEGREES = [0, 45, 90, 135, 180, 225, 270, 315];
+const ANGLE_SNAP_TOLERANCE_DEG = 8;
+// The relative angles (to the first edge drawn) worth a closing-guide line
+// through the first vertex — one entry per distinct infinite line, since a
+// line at 0° from the first edge is the same line as one at 180° (and
+// likewise 45°/225°, 90°/270°, 135°/315°). Mirrors ANGLE_SNAP_DEGREES so
+// every angle an edge can snap to also gets a closing guide to match it.
+const CLOSING_GUIDE_ANGLES = [0, 45, 90, 135];
+// How far out (screen pixels) the closing-guide line shows itself — wider
+// than SNAP_PX itself since the line has no length of its own to help you
+// notice it, unlike a vertex or an edge. Covers the actual snap radius too,
+// so the guide stays up through the snap instead of vanishing right as the
+// cursor locks onto it.
+const CLOSING_GUIDE_RANGE_PX = SNAP_PX * 3;
+// How far (screen pixels) the guide line is drawn past the first vertex in
+// each direction — just needs to comfortably outlast any reasonable
+// viewport so it reads as an infinite line.
+const CLOSING_GUIDE_EXTENT_PX = 8000;
 
 const ROOFS_SOURCE_ID = "roofs";
 const DRAFT_LINE_SOURCE_ID = "draft-line";
 const DRAFT_POINTS_SOURCE_ID = "draft-points";
+const CLOSING_GUIDE_SOURCE_ID = "closing-guide-line";
 const MODULES_SOURCE_ID = "modules";
 const MODULES_FILL_LAYER_ID = "modules-fill";
 const TRANSLATE_LINE_SOURCE_ID = "translate-line";
@@ -64,9 +96,220 @@ export type PendingPlacement =
 function moduleLngLat(modules: Module[], roofs: Roof[], moduleId: string): LngLat | null {
   const m = modules.find((mod) => mod.id === moduleId);
   const roof = m && roofs.find((r) => r.id === m.roofId);
-  const origin = roof && roofOrigin(roof);
-  if (!m || !origin) return null;
-  return metersToLngLat(origin, m.x, m.y);
+  if (!m || !roof) return null;
+  return moduleToLngLat(roof, m.x, m.y);
+}
+
+// The closest vertex among every existing roof's outline to `screenPoint`,
+// if any is within SNAP_PX — lets a new roof's outline snap onto an
+// adjacent roof's corners instead of leaving a gap or overlap between them.
+function findNearbyRoofVertex(
+  map: maplibregl.Map,
+  roofs: Roof[],
+  screenPoint: maplibregl.Point
+): [number, number] | null {
+  let closest: [number, number] | null = null;
+  let closestDist = SNAP_PX;
+  for (const roof of roofs) {
+    const ring = roof.roofOutline?.coordinates[0] as [number, number][] | undefined;
+    if (!ring) continue;
+    for (const vertex of ring) {
+      const dist = screenPoint.dist(map.project(vertex));
+      if (dist <= closestDist) {
+        closestDist = dist;
+        closest = vertex;
+      }
+    }
+  }
+  return closest;
+}
+
+// Smallest angle (degrees) between two directions, both in [0, 360).
+function angleDiff(a: number, b: number): number {
+  const diff = Math.abs(a - b) % 360;
+  return diff > 180 ? 360 - diff : diff;
+}
+
+// If there's a previous edge to measure against, and the candidate point's
+// direction from the last vertex is within tolerance of one of
+// ANGLE_SNAP_DEGREES relative to that edge, snap to that exact direction —
+// keeping the cursor's actual distance, just correcting the angle. Makes
+// square (or straight-continuation) corners easy to place precisely.
+function snapToAngle(
+  map: maplibregl.Map,
+  draftPoints: [number, number][],
+  screenPoint: maplibregl.Point
+): [number, number] | null {
+  if (draftPoints.length < 2) return null;
+  const last = map.project(draftPoints[draftPoints.length - 1]);
+  const prev = map.project(draftPoints[draftPoints.length - 2]);
+
+  const dx = screenPoint.x - last.x;
+  const dy = screenPoint.y - last.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance === 0) return null;
+
+  const refAngle = Math.atan2(last.y - prev.y, last.x - prev.x);
+  const relativeDeg = (((Math.atan2(dy, dx) - refAngle) * 180) / Math.PI + 360) % 360;
+
+  const nearestSnap = ANGLE_SNAP_DEGREES.reduce((best, deg) =>
+    angleDiff(relativeDeg, deg) < angleDiff(relativeDeg, best) ? deg : best
+  );
+  if (angleDiff(relativeDeg, nearestSnap) > ANGLE_SNAP_TOLERANCE_DEG) return null;
+
+  const snappedAngle = refAngle + (nearestSnap * Math.PI) / 180;
+  const snappedScreen: [number, number] = [
+    last.x + distance * Math.cos(snappedAngle),
+    last.y + distance * Math.sin(snappedAngle),
+  ];
+  const ll = map.unproject(snappedScreen);
+  return [ll.lng, ll.lat];
+}
+
+// One infinite line through the first vertex, at `relativeDeg` from the
+// first edge drawn — a candidate target a closing vertex can land on for
+// the final edge to come out at that same angle from the first one. That's
+// easy for the edges in between (each just needs the right angle from the
+// one before it), but the closing edge's angle is a side effect of exactly
+// where the last vertex lands, not something the existing previous-edge
+// angle snap alone can guarantee. Null until the first edge exists (2
+// points).
+function closingGuideLine(
+  map: maplibregl.Map,
+  draftPoints: [number, number][],
+  relativeDeg: number
+): { origin: maplibregl.Point; ux: number; uy: number } | null {
+  if (draftPoints.length < 2) return null;
+  const origin = map.project(draftPoints[0]);
+  const next = map.project(draftPoints[1]);
+  const dx = next.x - origin.x;
+  const dy = next.y - origin.y;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return null;
+  const angle = Math.atan2(dy, dx) + (relativeDeg * Math.PI) / 180;
+  return { origin, ux: Math.cos(angle), uy: Math.sin(angle) };
+}
+
+// Every closing-guide line worth considering (see CLOSING_GUIDE_ANGLES),
+// each tagged with the relative angle that produced it.
+function closingGuideLines(
+  map: maplibregl.Map,
+  draftPoints: [number, number][]
+): { relativeDeg: number; origin: maplibregl.Point; ux: number; uy: number }[] {
+  return CLOSING_GUIDE_ANGLES.flatMap((relativeDeg) => {
+    const line = closingGuideLine(map, draftPoints, relativeDeg);
+    return line ? [{ relativeDeg, ...line }] : [];
+  });
+}
+
+// The closest point on any closing-guide line to `screenPoint`, and how
+// far away it is — the distance decides both whether to show that guide
+// line (see CLOSING_GUIDE_RANGE_PX) and whether to actually snap onto it
+// (SNAP_PX). When more than one line is in range, the nearest one wins.
+function projectOntoClosingGuide(
+  map: maplibregl.Map,
+  draftPoints: [number, number][],
+  screenPoint: maplibregl.Point
+): { point: [number, number]; distance: number; origin: maplibregl.Point; ux: number; uy: number } | null {
+  let best: { point: [number, number]; distance: number; origin: maplibregl.Point; ux: number; uy: number } | null =
+    null;
+  for (const line of closingGuideLines(map, draftPoints)) {
+    const t = (screenPoint.x - line.origin.x) * line.ux + (screenPoint.y - line.origin.y) * line.uy;
+    const projected = new maplibregl.Point(line.origin.x + t * line.ux, line.origin.y + t * line.uy);
+    const distance = screenPoint.dist(projected);
+    if (!best || distance < best.distance) {
+      const ll = map.unproject(projected);
+      best = { point: [ll.lng, ll.lat], distance, origin: line.origin, ux: line.ux, uy: line.uy };
+    }
+  }
+  return best;
+}
+
+// Where a closing-guide line crosses the angle-snapped direction of the
+// edge currently being drawn — the exact corner a rectangle's (or a
+// diagonal roof's) last vertex needs, satisfying both constraints (this
+// edge's own angle snap *and* the closing edge's angle relative to the
+// first one) at once. Without this, whichever constraint the cursor
+// happens to be nearer to wins outright, so the preview edge snaps onto
+// one line right as it'd otherwise line up with both — visibly "losing"
+// whichever snap it had a moment ago instead of the two meeting. Checks
+// every closing-guide line and keeps whichever produces the nearest
+// corner; a line parallel to this edge's snapped direction (no single
+// corner exists — most commonly while placing the vertex right after the
+// first edge, where "the previous edge" and "the first edge" are the same
+// edge) is skipped rather than considered.
+function closingCornerSnap(
+  map: maplibregl.Map,
+  draftPoints: [number, number][],
+  screenPoint: maplibregl.Point
+): { point: [number, number]; distance: number } | null {
+  if (draftPoints.length < 2) return null;
+  const guideLines = closingGuideLines(map, draftPoints);
+  if (guideLines.length === 0) return null;
+
+  const last = map.project(draftPoints[draftPoints.length - 1]);
+  const prev = map.project(draftPoints[draftPoints.length - 2]);
+  const dx = screenPoint.x - last.x;
+  const dy = screenPoint.y - last.y;
+  if (dx === 0 && dy === 0) return null;
+
+  // Same "nearest candidate angle" logic as snapToAngle, but we need the
+  // resulting direction itself (as a line to intersect), not just a
+  // go/no-go on the raw cursor position.
+  const refAngle = Math.atan2(last.y - prev.y, last.x - prev.x);
+  const relativeDeg = (((Math.atan2(dy, dx) - refAngle) * 180) / Math.PI + 360) % 360;
+  const nearestSnap = ANGLE_SNAP_DEGREES.reduce((best, deg) =>
+    angleDiff(relativeDeg, deg) < angleDiff(relativeDeg, best) ? deg : best
+  );
+  const snappedAngle = refAngle + (nearestSnap * Math.PI) / 180;
+  const edgeDir = { x: Math.cos(snappedAngle), y: Math.sin(snappedAngle) };
+
+  let best: { point: [number, number]; distance: number } | null = null;
+  for (const guideLine of guideLines) {
+    const guideDir = { x: guideLine.ux, y: guideLine.uy };
+    // Solve last + t*edgeDir = guideLine.origin + s*guideDir for t.
+    const denom = edgeDir.x * guideDir.y - edgeDir.y * guideDir.x;
+    if (Math.abs(denom) < 1e-6) continue; // parallel to this guide — no single corner
+
+    const ox = guideLine.origin.x - last.x;
+    const oy = guideLine.origin.y - last.y;
+    const t = (ox * guideDir.y - oy * guideDir.x) / denom;
+    const corner = new maplibregl.Point(last.x + t * edgeDir.x, last.y + t * edgeDir.y);
+    const distance = screenPoint.dist(corner);
+    if (!best || distance < best.distance) {
+      const ll = map.unproject(corner);
+      best = { point: [ll.lng, ll.lat], distance };
+    }
+  }
+  return best;
+}
+
+// Where a candidate point actually lands once every roof-tracing snap is
+// applied, in priority order: an existing roof's vertex first (an exact,
+// deliberate target), then the corner where the closing guide meets the
+// angle-snapped edge direction, then either of those individually, then the
+// raw cursor position. Used by both the click handler and the live preview
+// line so what's shown is exactly what clicking would do.
+function snapDraftPoint(
+  map: maplibregl.Map,
+  roofs: Roof[],
+  draftPoints: [number, number][],
+  screenPoint: maplibregl.Point
+): [number, number] {
+  const nearbyVertex = findNearbyRoofVertex(map, roofs, screenPoint);
+  if (nearbyVertex) return nearbyVertex;
+
+  const corner = closingCornerSnap(map, draftPoints, screenPoint);
+  if (corner && corner.distance <= SNAP_PX) return corner.point;
+
+  const closingGuide = projectOntoClosingGuide(map, draftPoints, screenPoint);
+  if (closingGuide && closingGuide.distance <= SNAP_PX) return closingGuide.point;
+
+  const angleSnapped = snapToAngle(map, draftPoints, screenPoint);
+  if (angleSnapped) return angleSnapped;
+
+  const ll = map.unproject(screenPoint);
+  return [ll.lng, ll.lat];
 }
 
 interface Props {
@@ -84,6 +327,8 @@ interface Props {
   selectedModuleIds: string[];
   onModuleClick: (id: string | null, additive: boolean) => void;
   onModuleDoubleClick: (roofId: string) => void;
+  selectedRoofId: string | null;
+  onRoofClick: (id: string) => void;
 }
 
 export default function MapView({
@@ -101,6 +346,8 @@ export default function MapView({
   selectedModuleIds,
   onModuleClick,
   onModuleDoubleClick,
+  selectedRoofId,
+  onRoofClick,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -155,6 +402,17 @@ export default function MapView({
         type: "line",
         source: MODULES_SOURCE_ID,
         paint: { "line-color": "#ffee58", "line-width": 1 },
+      });
+
+      // A reference line, not a real edge — kept visually subdued (thin,
+      // finely dotted, semi-transparent) and beneath the draft line/points
+      // so it never gets mistaken for one.
+      map.addSource(CLOSING_GUIDE_SOURCE_ID, { type: "geojson", data: emptyFC() });
+      map.addLayer({
+        id: "closing-guide-line",
+        type: "line",
+        source: CLOSING_GUIDE_SOURCE_ID,
+        paint: { "line-color": "#ffffff", "line-width": 1, "line-dasharray": [1, 3], "line-opacity": 0.6 },
       });
 
       map.addSource(DRAFT_LINE_SOURCE_ID, { type: "geojson", data: emptyFC() });
@@ -256,11 +514,38 @@ export default function MapView({
     ]);
   }, [selectedModuleIds, styleLoaded]);
 
-  // Track the cursor while a group move is pending, to drive the
-  // translation-preview line below.
+  // Highlight the selected roof. Uses a distinct hue (orange -> teal, not
+  // just a lighter/darker orange) plus a visibly thicker outline, so the
+  // selection doesn't rely on color alone — orange/teal also stays
+  // distinguishable under the common red-green color-vision deficiencies,
+  // unlike an orange/green pairing would.
+  useEffect(() => {
+    if (!mapRef.current || !styleLoaded) return;
+    mapRef.current.setPaintProperty("roofs-fill", "fill-color", [
+      "case",
+      ["==", ["get", "id"], selectedRoofId ?? ""],
+      "#00acc1",
+      "#ff9800",
+    ]);
+    mapRef.current.setPaintProperty("roofs-outline", "line-color", [
+      "case",
+      ["==", ["get", "id"], selectedRoofId ?? ""],
+      "#00838f",
+      "#ff9800",
+    ]);
+    mapRef.current.setPaintProperty("roofs-outline", "line-width", [
+      "case",
+      ["==", ["get", "id"], selectedRoofId ?? ""],
+      4,
+      2,
+    ]);
+  }, [selectedRoofId, styleLoaded]);
+
+  // Track the cursor while a group move is pending or a roof is being
+  // traced, to drive the preview lines below.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || pendingPlacement?.kind !== "move") {
+    if (!map || (!drawing && pendingPlacement?.kind !== "move")) {
       setMouseLngLat(null);
       return;
     }
@@ -271,7 +556,7 @@ export default function MapView({
     return () => {
       map.off("mousemove", handleMouseMove);
     };
-  }, [pendingPlacement]);
+  }, [drawing, pendingPlacement]);
 
   // Render the shared translation line: anchor module's center -> cursor.
   useEffect(() => {
@@ -326,14 +611,32 @@ export default function MapView({
 
     function handleClick(e: maplibregl.MapMouseEvent) {
       if (drawing) {
+        // Clicking near the first vertex closes the loop instead of adding
+        // another point — same proximity check (and snap target) as the
+        // preview line above, so what you see is what you get.
+        //
+        // TODO: this and snapDraftPoint's snaps are cases of the same
+        // general snapping system — see "Roof outline drawing: future
+        // CAD-like tools" in docs/FUTURE-NOTES.md for what's still planned
+        // (edge-midpoint snapping, fillet, autocomplete).
+        if (draftPoints.length >= 3) {
+          const dist = e.point.dist(map!.project(draftPoints[0]));
+          if (dist <= SNAP_PX) {
+            finishDrawing(draftPoints);
+            return;
+          }
+        }
+
+        const clicked = snapDraftPoint(map!, roofs, draftPoints, e.point);
+
         setDraftPoints((prev) => {
           const last = prev[prev.length - 1];
           // A duplicate point (e.g. an accidental double-click) creates a
           // zero-length edge that gets traced twice — that silently breaks
           // ray-casting containment checks later, since every real crossing
           // along it gets counted twice and cancels itself out. Skip it.
-          if (last && last[0] === e.lngLat.lng && last[1] === e.lngLat.lat) return prev;
-          return [...prev, [e.lngLat.lng, e.lngLat.lat]];
+          if (last && last[0] === clicked[0] && last[1] === clicked[1]) return prev;
+          return [...prev, clicked];
         });
         return;
       }
@@ -367,10 +670,10 @@ export default function MapView({
           setPlacementError("Click inside a traced roof outline");
           return;
         }
-        const origin = roofOrigin(roof);
-        if (!origin) return;
-        const { x, y } = lngLatToMeters(origin, { lng: point[0], lat: point[1] });
-        if (overlapsExisting(modules, moduleTypes, roof.id, x, y, pendingPlacement.orientation, pendingPlacement.moduleTypeId)) {
+        const local = lngLatToModule(roof, { lng: point[0], lat: point[1] });
+        if (!local) return;
+        const { x, y } = local;
+        if (overlapsExisting(modules, moduleTypes, roof.id, x, y, pendingPlacement.orientation, pendingPlacement.moduleTypeId, roof.tilt)) {
           setPlacementError("Modules can't overlap — try another spot");
           return;
         }
@@ -379,21 +682,26 @@ export default function MapView({
       }
 
       // Idle: clicking a module adds it to the selection (shift/ctrl/cmd
-      // removes an already-selected one). A miss — no module hit — clears
-      // the selection, unless it still lands inside the roof the current
-      // selection is already on: a near-miss next to a module you meant to
-      // click shouldn't cost you your selection.
+      // removes an already-selected one) and clears any roof selection.
+      // Missing every module but still landing inside a roof selects that
+      // roof instead (toggling it off if it's already selected) and clears
+      // module selection. Missing everything clears both.
       const hits = map!.queryRenderedFeatures(e.point, { layers: [MODULES_FILL_LAYER_ID] });
       const hitId = hits[0]?.properties?.id as string | undefined;
-      const additive = e.originalEvent.shiftKey || e.originalEvent.metaKey || e.originalEvent.ctrlKey;
 
-      if (!hitId && selectedModuleIds.length > 0) {
-        const selectionRoofId = modules.find((m) => m.id === selectedModuleIds[0])?.roofId;
-        const clickedRoof = findContainingRoof(roofs, [e.lngLat.lng, e.lngLat.lat]);
-        if (selectionRoofId && clickedRoof?.id === selectionRoofId) return;
+      if (hitId) {
+        const additive = e.originalEvent.shiftKey || e.originalEvent.metaKey || e.originalEvent.ctrlKey;
+        onModuleClick(hitId, additive);
+        return;
       }
 
-      onModuleClick(hitId ?? null, additive);
+      const clickedRoof = findContainingRoof(roofs, [e.lngLat.lng, e.lngLat.lat]);
+      if (clickedRoof) {
+        onRoofClick(clickedRoof.id);
+        return;
+      }
+
+      onModuleClick(null, false);
     }
 
     // Double-click a module to select every module on its roof — only makes
@@ -427,25 +735,60 @@ export default function MapView({
     onGroupMoveResolved,
     onModuleClick,
     onModuleDoubleClick,
-    selectedModuleIds,
+    onRoofClick,
+    draftPoints,
   ]);
 
-  // Render the in-progress trace (line between placed points + point markers).
+  // Render the in-progress trace: the committed points/edges, plus (while
+  // drawing) a trailing preview segment from the last vertex to the cursor,
+  // so the next edge is visible before it's placed. That preview segment
+  // snaps the same way a click would — onto the first vertex (closing the
+  // loop) or onto a nearby vertex from another roof — so what's shown is
+  // exactly what clicking now would do.
   useEffect(() => {
     if (!mapRef.current || !styleLoaded) return;
-    const lineSource = mapRef.current.getSource(
-      DRAFT_LINE_SOURCE_ID
-    ) as maplibregl.GeoJSONSource;
-    const pointsSource = mapRef.current.getSource(
-      DRAFT_POINTS_SOURCE_ID
-    ) as maplibregl.GeoJSONSource;
+    const map = mapRef.current;
+    const lineSource = map.getSource(DRAFT_LINE_SOURCE_ID) as maplibregl.GeoJSONSource;
+    const pointsSource = map.getSource(DRAFT_POINTS_SOURCE_ID) as maplibregl.GeoJSONSource;
+    const guideSource = map.getSource(CLOSING_GUIDE_SOURCE_ID) as maplibregl.GeoJSONSource;
+
+    let previewCoords = draftPoints;
+    // Only drawn once the cursor is close enough to be worth mentioning —
+    // otherwise every edge of every roof would carry a permanent line
+    // through its first vertex, cluttering the map for no reason. Stays
+    // visible through the actual snap too (not just the approach), so the
+    // preview edge visibly locking onto it is the confirmation that it
+    // worked, rather than the guide vanishing right as it'd be useful.
+    let guideCoords: [[number, number], [number, number]] | null = null;
+    if (drawing && mouseLngLat) {
+      const cursorScreen = map.project([mouseLngLat.lng, mouseLngLat.lat]);
+      const cursor: [number, number] =
+        draftPoints.length >= 3 && cursorScreen.dist(map.project(draftPoints[0])) <= SNAP_PX
+          ? draftPoints[0]
+          : snapDraftPoint(map, roofs, draftPoints, cursorScreen);
+      previewCoords = [...draftPoints, cursor];
+
+      const guide = projectOntoClosingGuide(map, draftPoints, cursorScreen);
+      if (guide && guide.distance <= CLOSING_GUIDE_RANGE_PX) {
+        const a = map.unproject(
+          new maplibregl.Point(guide.origin.x + guide.ux * CLOSING_GUIDE_EXTENT_PX, guide.origin.y + guide.uy * CLOSING_GUIDE_EXTENT_PX)
+        );
+        const b = map.unproject(
+          new maplibregl.Point(guide.origin.x - guide.ux * CLOSING_GUIDE_EXTENT_PX, guide.origin.y - guide.uy * CLOSING_GUIDE_EXTENT_PX)
+        );
+        guideCoords = [
+          [a.lng, a.lat],
+          [b.lng, b.lat],
+        ];
+      }
+    }
 
     lineSource?.setData(
-      draftPoints.length >= 2
+      previewCoords.length >= 2
         ? {
             type: "FeatureCollection",
             features: [
-              { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: draftPoints } },
+              { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: previewCoords } },
             ],
           }
         : emptyFC()
@@ -458,12 +801,24 @@ export default function MapView({
         geometry: { type: "Point", coordinates: p },
       })),
     });
-  }, [draftPoints, styleLoaded]);
+    guideSource?.setData(
+      guideCoords
+        ? {
+            type: "FeatureCollection",
+            features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: guideCoords } }],
+          }
+        : emptyFC()
+    );
+  }, [draftPoints, mouseLngLat, drawing, roofs, styleLoaded]);
+
+  function finishDrawing(points: [number, number][]) {
+    if (points.length < 3) return;
+    const ring = [...points, points[0]]; // GeoJSON polygons must close
+    onRoofDrawn({ type: "Polygon", coordinates: [ring] });
+  }
 
   function handleFinish() {
-    if (draftPoints.length < 3) return;
-    const ring = [...draftPoints, draftPoints[0]]; // GeoJSON polygons must close
-    onRoofDrawn({ type: "Polygon", coordinates: [ring] });
+    finishDrawing(draftPoints);
   }
 
   return (

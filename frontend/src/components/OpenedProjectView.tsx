@@ -11,6 +11,7 @@ import type { GeocodeResult } from "../api/geocoding";
 import {
   DEFAULT_MODULE_TYPE,
   MODULE_TYPES,
+  deriveAzimuthFromOutline,
   fillRoofWithModules,
   type GroupMoveResult,
   type Module,
@@ -39,8 +40,21 @@ export default function OpenedProjectView({ project, onBack }: Props) {
   const [modules, setModules] = useState<Module[]>(project.modules);
   const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
   const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([]);
+  const [selectedRoofId, setSelectedRoofId] = useState<string | null>(null);
+  // Tilt/azimuth determine every module's size and position on a roof (see
+  // moduleGeometry's foreshortening/rotation math), so editing them once
+  // modules exist would invalidate those modules' geometry with nothing to
+  // recompute it — RoofList already refuses to enable Edit in that case.
+  // Also folded into `busy` below so starting a new roof trace or module
+  // placement mid-edit isn't possible either.
+  const [isEditingRoof, setIsEditingRoof] = useState(false);
 
-  useHotkey("Escape", () => setSelectedModuleIds([]));
+  const busy = drawing || !!pendingPlacement || isEditingRoof;
+
+  useHotkey("Escape", () => {
+    setSelectedModuleIds([]);
+    setSelectedRoofId(null);
+  });
 
   async function handleAddressSelect(result: GeocodeResult) {
     setCenter({ lng: result.lng, lat: result.lat });
@@ -63,7 +77,9 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     const newRoof: Roof = {
       id: crypto.randomUUID(),
       roofOutline: outline,
-      azimuth: 180, // south-facing default — editing per-roof lands later
+      // Derived from the outline itself (first edge drawn = bottom/eave
+      // edge) until we have real 3D roof-plane data to pull this from.
+      azimuth: deriveAzimuthFromOutline(outline),
       tilt: 20, // moderate pitch default
     };
     persistRoofs([...roofs, newRoof]);
@@ -74,6 +90,32 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     persistRoofs(roofs.filter((r) => r.id !== id));
     // Modules only make sense attached to a roof — drop any that were on it.
     persistModules(modules.filter((m) => m.roofId !== id));
+    // Delete Roof only ever targets the currently-selected roof, so this is
+    // always that roof going away — clear its selection/edit state with it.
+    setSelectedRoofId(null);
+    setIsEditingRoof(false);
+  }
+
+  function handleUpdateRoof(id: string, changes: Partial<Pick<Roof, "tilt" | "azimuth">>) {
+    persistRoofs(roofs.map((r) => (r.id === id ? { ...r, ...changes } : r)));
+  }
+
+  function handleRoofClick(id: string) {
+    setSelectedModuleIds([]);
+    setSelectedRoofId((prev) => (prev === id ? null : id));
+    setIsEditingRoof(false);
+  }
+
+  function handleToggleEditRoof() {
+    if (!selectedRoofId) return;
+    // RoofList already disables the Edit button once the roof has modules,
+    // but re-check here too rather than trusting the UI alone.
+    if (!isEditingRoof && modules.some((m) => m.roofId === selectedRoofId)) return;
+    setIsEditingRoof((prev) => !prev);
+  }
+
+  function handleClearRoof(roofId: string) {
+    persistModules(modules.filter((m) => m.roofId !== roofId));
   }
 
   function handleFillRoof(roofId: string) {
@@ -104,6 +146,10 @@ export default function OpenedProjectView({ project, onBack }: Props) {
   }
 
   function handleModuleClick(id: string | null, additive: boolean) {
+    // Modules and a selected roof are alternate focuses — picking one
+    // clears the other, so the two control panels never show at once.
+    setSelectedRoofId(null);
+
     if (!id) {
       setSelectedModuleIds([]);
       return;
@@ -224,6 +270,8 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         selectedModuleIds={selectedModuleIds}
         onModuleClick={handleModuleClick}
         onModuleDoubleClick={handleModuleDoubleClick}
+        selectedRoofId={selectedRoofId}
+        onRoofClick={handleRoofClick}
       />
 
       {!center && (
@@ -234,13 +282,10 @@ export default function OpenedProjectView({ project, onBack }: Props) {
       )}
 
       <div className="roof-controls">
-        <button onClick={() => setDrawing(true)} disabled={drawing || !!pendingPlacement}>
+        <button onClick={() => setDrawing(true)} disabled={busy}>
           + Trace roof outline
         </button>
-        <button
-          onClick={handleAddModule}
-          disabled={drawing || !!pendingPlacement || roofs.length === 0}
-        >
+        <button onClick={handleAddModule} disabled={busy || roofs.length === 0}>
           + Add module
         </button>
       </div>
@@ -263,8 +308,14 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         modules={modules}
         moduleTypes={MODULE_TYPES}
         disabled={drawing || !!pendingPlacement}
+        selectedRoofId={selectedRoofId}
+        onSelectRoof={handleRoofClick}
+        isEditingRoof={isEditingRoof}
+        onToggleEditRoof={handleToggleEditRoof}
         onDelete={handleDeleteRoof}
         onFill={handleFillRoof}
+        onClear={handleClearRoof}
+        onUpdate={handleUpdateRoof}
       />
     </div>
   );
