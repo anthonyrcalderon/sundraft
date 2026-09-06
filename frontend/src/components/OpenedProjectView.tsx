@@ -54,6 +54,10 @@ export default function OpenedProjectView({ project, onBack }: Props) {
   useHotkey("Escape", () => {
     setSelectedModuleIds([]);
     setSelectedRoofId(null);
+    // "+ Add module" stays active across placements (see
+    // handlePlacementResolved) so it needs its own way out besides the
+    // toolbar's Cancel button.
+    setPendingPlacement(null);
   });
 
   async function handleAddressSelect(result: GeocodeResult) {
@@ -142,7 +146,7 @@ export default function OpenedProjectView({ project, onBack }: Props) {
   // checks that the click point is inside the roof, not the module's full footprint).
   function handleAddModule() {
     setSelectedModuleIds([]);
-    setPendingPlacement({ kind: "new", moduleTypeId: DEFAULT_MODULE_TYPE.id, orientation: "portrait" });
+    setPendingPlacement({ moduleTypeId: DEFAULT_MODULE_TYPE.id, orientation: "portrait" });
   }
 
   function handleModuleClick(id: string | null, additive: boolean) {
@@ -186,6 +190,16 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     setSelectedModuleIds(modules.filter((m) => m.roofId === roofId).map((m) => m.id));
   }
 
+  function handleRectSelect(_roofId: string, moduleIds: string[]) {
+    // Modules and a selected roof are alternate focuses, same as a plain
+    // module click — and unlike that click's "always adds," a drag
+    // rectangle replaces the selection outright with exactly what it
+    // caught (including catching nothing), since it's a single deliberate
+    // gesture rather than a series of individual picks to accumulate.
+    setSelectedRoofId(null);
+    setSelectedModuleIds(moduleIds);
+  }
+
   function handlePlacementResolved(roofId: string, x: number, y: number) {
     const newModule: Module = {
       id: crypto.randomUUID(),
@@ -196,7 +210,9 @@ export default function OpenedProjectView({ project, onBack }: Props) {
       orientation: "portrait",
     };
     persistModules([...modules, newModule]);
-    setPendingPlacement(null);
+    // Placement mode stays active (unlike the one-shot move above) so
+    // placing a whole row/grid doesn't mean re-clicking "+ Add module"
+    // before every single one — Cancel or Escape is how you leave it.
   }
 
   function handleRotateSelected() {
@@ -220,15 +236,10 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     );
   }
 
-  function handleMoveSelected() {
-    if (selectedModuleIds.length === 0) return;
-    const moduleIds = selectedModuleIds;
-    setSelectedModuleIds([]);
-    // Any member works as the anchor — it's just the reference point the
-    // translation line and delta are measured from, not special otherwise.
-    setPendingPlacement({ kind: "move", moduleIds, anchorModuleId: moduleIds[0] });
-  }
-
+  // Called once a drag-move on the map (see MapView: mousedown on an
+  // already-selected module picks the whole selection up) resolves to a
+  // valid drop — selection is left alone since the modules were already
+  // selected the whole time, never explicitly deselected mid-gesture.
   function handleGroupMoveResolved(results: GroupMoveResult[]) {
     const byId = new Map(results.map((r) => [r.moduleId, r]));
     persistModules(
@@ -237,7 +248,6 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         return r ? { ...m, roofId: r.roofId, x: r.x, y: r.y } : m;
       })
     );
-    setPendingPlacement(null);
   }
 
   function handleDeleteSelected() {
@@ -270,6 +280,7 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         selectedModuleIds={selectedModuleIds}
         onModuleClick={handleModuleClick}
         onModuleDoubleClick={handleModuleDoubleClick}
+        onRectSelect={handleRectSelect}
         selectedRoofId={selectedRoofId}
         onRoofClick={handleRoofClick}
       />
@@ -293,12 +304,12 @@ export default function OpenedProjectView({ project, onBack }: Props) {
       {selectedModuleIds.length > 0 && (
         <div className="module-controls">
           <span>
-            {selectedModuleIds.length} module{selectedModuleIds.length === 1 ? "" : "s"} selected
+            {selectedModuleIds.length} module{selectedModuleIds.length === 1 ? "" : "s"} selected{" "}
+            <span className="muted small">— drag a selected module to move the group</span>
           </span>
           <button onClick={handleRotateSelected} disabled={selectedModuleIds.length !== 1}>
             Rotate ↻
           </button>
-          <button onClick={handleMoveSelected}>Move</button>
           <button onClick={handleDeleteSelected}>Delete</button>
         </div>
       )}

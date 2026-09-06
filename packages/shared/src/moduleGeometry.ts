@@ -235,6 +235,89 @@ export function overlapsExisting(
     });
 }
 
+// Unlike `overlaps` above, touching at the boundary counts here — a rect
+// select is meant to catch a module it just grazes, not only ones it
+// properly overlaps (which is why placed modules are routinely allowed to
+// sit exactly edge-to-edge with zero gap in the first place).
+function touches(a: Aabb, b: Aabb): boolean {
+  return a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
+}
+
+// Every module on `roofId` whose footprint touches (any overlap, edge
+// contact included) the axis-aligned `rect`, given in that same roof's
+// local frame — the box a select-drag sweeps out. Since the rect is
+// already expressed in the roof's own rotated frame (see
+// rotateForAzimuth), it comes out aligned with the roof's azimuth for
+// free, the same way module positions do, with no separate rotation step
+// needed here.
+export function modulesTouchingRect(
+  modules: Module[],
+  moduleTypes: ModuleType[],
+  roofId: string,
+  tiltDeg: number,
+  rect: { minX: number; maxX: number; minY: number; maxY: number }
+): string[] {
+  return modules
+    .filter((m) => m.roofId === roofId)
+    .filter((m) => {
+      const type = moduleTypes.find((t) => t.id === m.moduleTypeId);
+      if (!type) return false;
+      const { w, h } = effectiveSize(type, m.orientation, tiltDeg);
+      return touches(rect, aabb(m.x, m.y, w, h));
+    })
+    .map((m) => m.id);
+}
+
+// How close (roof-local meters) a click needs to land to an existing
+// module's adjacent slot before it snaps there — generous enough to cover
+// "clicked just past its edge, meaning to place the next one," not just an
+// exact pixel-perfect hit.
+const ADJACENT_SNAP_METERS = 1;
+
+// Where (x, y) lands once snapped next to whichever nearby module it's
+// closest to, edge-to-edge with zero gap — the same grid a row of Fill'd
+// modules would produce, but built up one placement at a time. Checks the
+// four cardinal slots (left/right/above/below, in the roof-local frame)
+// around every module already on the roof and returns whichever slot's
+// center is nearest, provided it's within ADJACENT_SNAP_METERS; null (place
+// at the raw point) if nothing nearby qualifies.
+export function snapToAdjacentModule(
+  modules: Module[],
+  moduleTypes: ModuleType[],
+  roofId: string,
+  x: number,
+  y: number,
+  orientation: ModuleOrientation,
+  moduleTypeId: string,
+  tiltDeg: number
+): { x: number; y: number } | null {
+  const type = moduleTypes.find((t) => t.id === moduleTypeId);
+  if (!type) return null;
+  const { w, h } = effectiveSize(type, orientation, tiltDeg);
+
+  let best: { x: number; y: number; distance: number } | null = null;
+  for (const m of modules) {
+    if (m.roofId !== roofId) continue;
+    const mType = moduleTypes.find((t) => t.id === m.moduleTypeId);
+    if (!mType) continue;
+    const mSize = effectiveSize(mType, m.orientation, tiltDeg);
+
+    const candidates: { x: number; y: number }[] = [
+      { x: m.x - mSize.w / 2 - w / 2, y: m.y },
+      { x: m.x + mSize.w / 2 + w / 2, y: m.y },
+      { x: m.x, y: m.y - mSize.h / 2 - h / 2 },
+      { x: m.x, y: m.y + mSize.h / 2 + h / 2 },
+    ];
+    for (const c of candidates) {
+      const distance = Math.hypot(c.x - x, c.y - y);
+      if (distance <= ADJACENT_SNAP_METERS && (!best || distance < best.distance)) {
+        best = { ...c, distance };
+      }
+    }
+  }
+  return best && { x: best.x, y: best.y };
+}
+
 // Fills a roof with as many non-overlapping modules as fit, packed
 // edge-to-edge in a simple grid aligned to the roof's own azimuth-rotated
 // axes (see rotateForAzimuth) — rows run along the roof's facing direction,

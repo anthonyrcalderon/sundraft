@@ -9,11 +9,15 @@ import {
   type ModuleType,
   type Roof,
   findContainingRoof,
+  lngLatToMeters,
   lngLatToModule,
+  metersToLngLat,
   moduleRing,
   moduleToLngLat,
+  modulesTouchingRect,
   overlapsExisting,
   resolveGroupMove,
+  snapToAdjacentModule,
 } from "sundraft-shared";
 
 // Esri's public World Imagery tiles — free, no API key, no card, no signup.
@@ -74,30 +78,28 @@ const CLOSING_GUIDE_RANGE_PX = SNAP_PX * 3;
 // viewport so it reads as an infinite line.
 const CLOSING_GUIDE_EXTENT_PX = 8000;
 
+// Screen-pixel distance a mousedown-then-up has to travel before it counts
+// as a drag (a select-rectangle, or picking up the selection to move it)
+// rather than a plain click — absorbs the couple pixels of jitter a real
+// click still has.
+const DRAG_MIN_PX = 6;
+
 const ROOFS_SOURCE_ID = "roofs";
 const DRAFT_LINE_SOURCE_ID = "draft-line";
 const DRAFT_POINTS_SOURCE_ID = "draft-points";
 const CLOSING_GUIDE_SOURCE_ID = "closing-guide-line";
+const SELECT_RECT_SOURCE_ID = "select-rect";
 const MODULES_SOURCE_ID = "modules";
 const MODULES_FILL_LAYER_ID = "modules-fill";
-const TRANSLATE_LINE_SOURCE_ID = "translate-line";
 
 const emptyFC = (): GeoJSON.FeatureCollection => ({
   type: "FeatureCollection",
   features: [],
 });
 
-export type PendingPlacement =
-  | { kind: "new"; moduleTypeId: string; orientation: ModuleOrientation }
-  | { kind: "move"; moduleIds: string[]; anchorModuleId: string };
-
-// A module's current real-world position — needed to anchor the group-move
-// translation line, and as the reference frame for resolveGroupMove.
-function moduleLngLat(modules: Module[], roofs: Roof[], moduleId: string): LngLat | null {
-  const m = modules.find((mod) => mod.id === moduleId);
-  const roof = m && roofs.find((r) => r.id === m.roofId);
-  if (!m || !roof) return null;
-  return moduleToLngLat(roof, m.x, m.y);
+export interface PendingPlacement {
+  moduleTypeId: string;
+  orientation: ModuleOrientation;
 }
 
 // The closest vertex among every existing roof's outline to `screenPoint`,
@@ -327,8 +329,30 @@ interface Props {
   selectedModuleIds: string[];
   onModuleClick: (id: string | null, additive: boolean) => void;
   onModuleDoubleClick: (roofId: string) => void;
+  onRectSelect: (roofId: string, moduleIds: string[]) => void;
   selectedRoofId: string | null;
   onRoofClick: (id: string) => void;
+}
+
+// A select-rectangle drag in progress: the roof it started on (the only
+// roof its result can ever select from) and where it started, both as the
+// drag needs to re-derive the current rectangle on every subsequent
+// mousemove/mouseup.
+interface BoxSelect {
+  roofId: string;
+  startLngLat: LngLat;
+  startScreen: { x: number; y: number };
+}
+
+// A group-move drag in progress: every module riding along (the whole
+// current selection, snapshotted at mousedown so it can't change mid-drag)
+// and where the drag started — resolveGroupMove only needs that start
+// point and the current cursor position to compute the shared real-world
+// translation, not which module was actually grabbed.
+interface ModuleDrag {
+  moduleIds: string[];
+  startLngLat: LngLat;
+  startScreen: { x: number; y: number };
 }
 
 export default function MapView({
@@ -346,6 +370,7 @@ export default function MapView({
   selectedModuleIds,
   onModuleClick,
   onModuleDoubleClick,
+  onRectSelect,
   selectedRoofId,
   onRoofClick,
 }: Props) {
@@ -355,6 +380,8 @@ export default function MapView({
   const [draftPoints, setDraftPoints] = useState<[number, number][]>([]);
   const [placementError, setPlacementError] = useState<string | null>(null);
   const [mouseLngLat, setMouseLngLat] = useState<LngLat | null>(null);
+  const [boxSelect, setBoxSelect] = useState<BoxSelect | null>(null);
+  const [moduleDrag, setModuleDrag] = useState<ModuleDrag | null>(null);
 
   // Create the map once.
   useEffect(() => {
@@ -404,6 +431,25 @@ export default function MapView({
         paint: { "line-color": "#ffee58", "line-width": 1 },
       });
 
+      // The marquee drawn while dragging a select-rectangle across a roof.
+      // Blue reads clearly against both roof states (orange unselected,
+      // teal selected) without being confused for either, and the fill is
+      // solid enough to read as "an area" while still showing the roof and
+      // modules underneath.
+      map.addSource(SELECT_RECT_SOURCE_ID, { type: "geojson", data: emptyFC() });
+      map.addLayer({
+        id: "select-rect-fill",
+        type: "fill",
+        source: SELECT_RECT_SOURCE_ID,
+        paint: { "fill-color": "#2979ff", "fill-opacity": 0.3 },
+      });
+      map.addLayer({
+        id: "select-rect-outline",
+        type: "line",
+        source: SELECT_RECT_SOURCE_ID,
+        paint: { "line-color": "#2979ff", "line-width": 2, "line-dasharray": [4, 2] },
+      });
+
       // A reference line, not a real edge — kept visually subdued (thin,
       // finely dotted, semi-transparent) and beneath the draft line/points
       // so it never gets mistaken for one.
@@ -436,17 +482,6 @@ export default function MapView({
         },
       });
 
-      // Shared "translation" preview during a group move — one line from an
-      // anchor module's center to the cursor, standing in for the vector
-      // that'll be applied to every selected module on the next click.
-      map.addSource(TRANSLATE_LINE_SOURCE_ID, { type: "geojson", data: emptyFC() });
-      map.addLayer({
-        id: "translate-line",
-        type: "line",
-        source: TRANSLATE_LINE_SOURCE_ID,
-        paint: { "line-color": "#4caf50", "line-width": 2, "line-dasharray": [2, 2] },
-      });
-
       setStyleLoaded(true);
     });
 
@@ -477,17 +512,34 @@ export default function MapView({
     });
   }, [roofs, styleLoaded]);
 
-  // Keep placed modules in sync with the source of truth.
+  // Keep placed modules in sync with the source of truth. While a group is
+  // being dragged, its members are drawn translated to the cursor's current
+  // offset from the drag's start — the same rigid, real-world-meters
+  // translation resolveGroupMove will actually apply on release — so the
+  // move is visible happening live instead of only jumping once dropped.
   useEffect(() => {
     if (!mapRef.current || !styleLoaded) return;
     const source = mapRef.current.getSource(MODULES_SOURCE_ID) as maplibregl.GeoJSONSource;
+
+    const dragDelta =
+      moduleDrag && mouseLngLat ? lngLatToMeters(moduleDrag.startLngLat, mouseLngLat) : null;
+
     const features: GeoJSON.Feature[] = [];
     for (const m of modules) {
       const roof = roofs.find((r) => r.id === m.roofId);
       const type = moduleTypes.find((t) => t.id === m.moduleTypeId);
       if (!roof || !type) continue;
-      const ring = moduleRing(roof, m, type);
+      let ring = moduleRing(roof, m, type);
       if (!ring) continue;
+
+      if (dragDelta && moduleDrag!.moduleIds.includes(m.id)) {
+        ring = ring.map(([lng, lat]) => {
+          const relative = lngLatToMeters(moduleDrag!.startLngLat, { lng, lat });
+          const shifted = metersToLngLat(moduleDrag!.startLngLat, relative.x + dragDelta.x, relative.y + dragDelta.y);
+          return [shifted.lng, shifted.lat];
+        });
+      }
+
       features.push({
         type: "Feature",
         properties: { id: m.id },
@@ -495,7 +547,7 @@ export default function MapView({
       });
     }
     source?.setData({ type: "FeatureCollection", features });
-  }, [modules, roofs, moduleTypes, styleLoaded]);
+  }, [modules, roofs, moduleTypes, styleLoaded, moduleDrag, mouseLngLat]);
 
   // Highlight every selected module.
   useEffect(() => {
@@ -513,6 +565,22 @@ export default function MapView({
       1,
     ]);
   }, [selectedModuleIds, styleLoaded]);
+
+  // Modules being actively dragged fade out heavily — the outline (above)
+  // stays fully visible so the shape and position are still clear, but a
+  // near-see-through fill means whatever's underneath (another module, the
+  // roof edge, bare ground past it) stays visible too, so a bad drop spot
+  // is obvious before you let go rather than after.
+  useEffect(() => {
+    if (!mapRef.current || !styleLoaded) return;
+    const draggingIds = moduleDrag?.moduleIds ?? [];
+    mapRef.current.setPaintProperty(MODULES_FILL_LAYER_ID, "fill-opacity", [
+      "case",
+      ["in", ["get", "id"], ["literal", draggingIds]],
+      0.2,
+      0.85,
+    ]);
+  }, [moduleDrag, styleLoaded]);
 
   // Highlight the selected roof. Uses a distinct hue (orange -> teal, not
   // just a lighter/darker orange) plus a visibly thicker outline, so the
@@ -541,55 +609,32 @@ export default function MapView({
     ]);
   }, [selectedRoofId, styleLoaded]);
 
-  // Track the cursor while a group move is pending or a roof is being
-  // traced, to drive the preview lines below.
+  // Track the cursor while a roof is being traced, a select-rectangle drag
+  // is in progress, or a group of already-selected modules is being
+  // dragged, to drive the preview lines/rectangle/live module positions
+  // below. Listens on the canvas directly (rather than MapLibre's own
+  // "mousemove" event) because both drags hold the mouse button down
+  // throughout — with dragPan disabled for them and no other gesture
+  // handler claiming it, MapLibre's own handler pipeline doesn't forward
+  // that movement as a "mousemove" event at all, so this is the one case
+  // that actually needs the raw DOM event underneath it.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || (!drawing && pendingPlacement?.kind !== "move")) {
+    if (!map || (!drawing && !boxSelect && !moduleDrag)) {
       setMouseLngLat(null);
       return;
     }
-    function handleMouseMove(e: maplibregl.MapMouseEvent) {
-      setMouseLngLat({ lng: e.lngLat.lng, lat: e.lngLat.lat });
+    const canvas = map.getCanvas();
+    function handleMouseMove(e: MouseEvent) {
+      const rect = canvas.getBoundingClientRect();
+      const ll = map!.unproject([e.clientX - rect.left, e.clientY - rect.top]);
+      setMouseLngLat({ lng: ll.lng, lat: ll.lat });
     }
-    map.on("mousemove", handleMouseMove);
+    canvas.addEventListener("mousemove", handleMouseMove);
     return () => {
-      map.off("mousemove", handleMouseMove);
+      canvas.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [drawing, pendingPlacement]);
-
-  // Render the shared translation line: anchor module's center -> cursor.
-  useEffect(() => {
-    if (!mapRef.current || !styleLoaded) return;
-    const source = mapRef.current.getSource(TRANSLATE_LINE_SOURCE_ID) as maplibregl.GeoJSONSource;
-
-    const anchorLngLat =
-      pendingPlacement?.kind === "move"
-        ? moduleLngLat(modules, roofs, pendingPlacement.anchorModuleId)
-        : null;
-
-    if (!anchorLngLat || !mouseLngLat) {
-      source?.setData(emptyFC());
-      return;
-    }
-
-    source?.setData({
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates: [
-              [anchorLngLat.lng, anchorLngLat.lat],
-              [mouseLngLat.lng, mouseLngLat.lat],
-            ],
-          },
-        },
-      ],
-    });
-  }, [pendingPlacement, mouseLngLat, modules, roofs, styleLoaded]);
+  }, [drawing, boxSelect, moduleDrag]);
 
   // Reset any in-progress trace/placement error when the relevant mode starts.
   useEffect(() => {
@@ -601,13 +646,16 @@ export default function MapView({
   }, [pendingPlacement]);
 
   // Single click handler covering all three interaction modes: tracing a
-  // roof, placing/moving a module, or (idle) selecting one.
+  // roof, placing a module, or (idle) selecting one.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    const active = drawing || !!pendingPlacement;
-    map.getCanvas().style.cursor = active ? "crosshair" : "";
+    map.getCanvas().style.cursor = moduleDrag
+      ? "grabbing"
+      : drawing || !!pendingPlacement || !!boxSelect
+        ? "crosshair"
+        : "";
 
     function handleClick(e: maplibregl.MapMouseEvent) {
       if (drawing) {
@@ -641,28 +689,6 @@ export default function MapView({
         return;
       }
 
-      if (pendingPlacement?.kind === "move") {
-        const anchorLngLat = moduleLngLat(modules, roofs, pendingPlacement.anchorModuleId);
-        if (!anchorLngLat) return;
-        const targetLngLat = { lng: e.lngLat.lng, lat: e.lngLat.lat };
-        const results = resolveGroupMove(
-          modules,
-          moduleTypes,
-          roofs,
-          pendingPlacement.moduleIds,
-          anchorLngLat,
-          targetLngLat
-        );
-        if (!results) {
-          setPlacementError(
-            "That move would take a module off its roof or into an overlap — try a different spot"
-          );
-          return;
-        }
-        onGroupMoveResolved(results);
-        return;
-      }
-
       if (pendingPlacement) {
         const point: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         const roof = findContainingRoof(roofs, point);
@@ -672,11 +698,32 @@ export default function MapView({
         }
         const local = lngLatToModule(roof, { lng: point[0], lat: point[1] });
         if (!local) return;
-        const { x, y } = local;
+        // A click near an existing module snaps to sit right next to it
+        // (edge-to-edge, same as Fill's grid) instead of landing wherever
+        // the cursor happened to be — building out a grid one placement at
+        // a time without having to eyeball each gap.
+        const snapped = snapToAdjacentModule(
+          modules,
+          moduleTypes,
+          roof.id,
+          local.x,
+          local.y,
+          pendingPlacement.orientation,
+          pendingPlacement.moduleTypeId,
+          roof.tilt
+        );
+        const { x, y } = snapped ?? local;
         if (overlapsExisting(modules, moduleTypes, roof.id, x, y, pendingPlacement.orientation, pendingPlacement.moduleTypeId, roof.tilt)) {
           setPlacementError("Modules can't overlap — try another spot");
           return;
         }
+        // Placement mode stays open for the next module (see
+        // handlePlacementResolved), so — unlike before, when a fresh
+        // pendingPlacement object on every "+ Add module" press reset this
+        // via the effect below — a stale error from an earlier miss has to
+        // be cleared explicitly on the next success, or it'd linger on
+        // screen despite every placement since actually landing fine.
+        setPlacementError(null);
         onPlacementResolved(roof.id, x, y);
         return;
       }
@@ -719,11 +766,95 @@ export default function MapView({
       if (roofId) onModuleDoubleClick(roofId);
     }
 
+    // Starting a drag on an already-selected module picks the whole
+    // selection up to move together; starting one inside a roof otherwise
+    // begins a select rectangle instead of panning the map. Either way,
+    // disabling dragPan here, before any movement happens, is what stops
+    // MapLibre's own pan gesture from ever grabbing it.
+    function handleMouseDown(e: maplibregl.MapMouseEvent) {
+      if (drawing || pendingPlacement) return;
+
+      const hits = map!.queryRenderedFeatures(e.point, { layers: [MODULES_FILL_LAYER_ID] });
+      const hitId = hits[0]?.properties?.id as string | undefined;
+      if (hitId && selectedModuleIds.includes(hitId)) {
+        map!.dragPan.disable();
+        setPlacementError(null);
+        setModuleDrag({
+          moduleIds: selectedModuleIds,
+          startLngLat: { lng: e.lngLat.lng, lat: e.lngLat.lat },
+          startScreen: { x: e.point.x, y: e.point.y },
+        });
+        return;
+      }
+
+      const roof = findContainingRoof(roofs, [e.lngLat.lng, e.lngLat.lat]);
+      if (!roof) return;
+      map!.dragPan.disable();
+      setPlacementError(null);
+      setBoxSelect({
+        roofId: roof.id,
+        startLngLat: { lng: e.lngLat.lng, lat: e.lngLat.lat },
+        startScreen: { x: e.point.x, y: e.point.y },
+      });
+    }
+
+    function handleMouseUp(e: maplibregl.MapMouseEvent) {
+      if (moduleDrag) {
+        map!.dragPan.enable();
+        setModuleDrag(null);
+
+        // Barely moved (or didn't at all) — leave it as the plain click it
+        // basically is (e.g. shift-click to deselect), rather than
+        // resolving a no-op move that'd needlessly touch every selected
+        // module's stored position.
+        const dragDistance = e.point.dist(new maplibregl.Point(moduleDrag.startScreen.x, moduleDrag.startScreen.y));
+        if (dragDistance < DRAG_MIN_PX) return;
+
+        const targetLngLat = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+        const results = resolveGroupMove(modules, moduleTypes, roofs, moduleDrag.moduleIds, moduleDrag.startLngLat, targetLngLat);
+        if (!results) {
+          setPlacementError("That move would take a module off its roof or into an overlap — try a different spot");
+          return;
+        }
+        onGroupMoveResolved(results);
+        return;
+      }
+
+      if (!boxSelect) return;
+      map!.dragPan.enable();
+      setBoxSelect(null);
+
+      // Barely moved (or didn't at all) — treat it as the plain click it
+      // basically is, rather than an empty select-rectangle that would
+      // otherwise wipe out the current selection.
+      const dragDistance = e.point.dist(new maplibregl.Point(boxSelect.startScreen.x, boxSelect.startScreen.y));
+      if (dragDistance < DRAG_MIN_PX) return;
+
+      const roof = roofs.find((r) => r.id === boxSelect.roofId);
+      if (!roof) return;
+      const start = lngLatToModule(roof, boxSelect.startLngLat);
+      const current = lngLatToModule(roof, { lng: e.lngLat.lng, lat: e.lngLat.lat });
+      if (!start || !current) return;
+
+      const rect = {
+        minX: Math.min(start.x, current.x),
+        maxX: Math.max(start.x, current.x),
+        minY: Math.min(start.y, current.y),
+        maxY: Math.max(start.y, current.y),
+      };
+      const touchedIds = modulesTouchingRect(modules, moduleTypes, roof.id, roof.tilt, rect);
+      onRectSelect(roof.id, touchedIds);
+    }
+
     map.on("click", handleClick);
     map.on("dblclick", handleDoubleClick);
+    map.on("mousedown", handleMouseDown);
+    map.on("mouseup", handleMouseUp);
     return () => {
       map.off("click", handleClick);
       map.off("dblclick", handleDoubleClick);
+      map.off("mousedown", handleMouseDown);
+      map.off("mouseup", handleMouseUp);
     };
   }, [
     drawing,
@@ -736,7 +867,11 @@ export default function MapView({
     onModuleClick,
     onModuleDoubleClick,
     onRoofClick,
+    onRectSelect,
     draftPoints,
+    boxSelect,
+    moduleDrag,
+    selectedModuleIds,
   ]);
 
   // Render the in-progress trace: the committed points/edges, plus (while
@@ -811,6 +946,46 @@ export default function MapView({
     );
   }, [draftPoints, mouseLngLat, drawing, roofs, styleLoaded]);
 
+  // Render the select-rectangle while a box-select drag is in progress: one
+  // corner at the drag's start, the opposite corner at the cursor, both
+  // expressed in the roof's own local frame (see snapDraftPoint's azimuth
+  // notes) so the box rotates with the roof's azimuth rather than sitting
+  // compass-aligned regardless of which way the roof faces.
+  useEffect(() => {
+    if (!mapRef.current || !styleLoaded) return;
+    const map = mapRef.current;
+    const rectSource = map.getSource(SELECT_RECT_SOURCE_ID) as maplibregl.GeoJSONSource;
+
+    let coords: [number, number][] | null = null;
+    const roof = boxSelect && roofs.find((r) => r.id === boxSelect.roofId);
+    if (boxSelect && mouseLngLat && roof) {
+      const start = lngLatToModule(roof, boxSelect.startLngLat);
+      const current = lngLatToModule(roof, mouseLngLat);
+      if (start && current) {
+        const minX = Math.min(start.x, current.x);
+        const maxX = Math.max(start.x, current.x);
+        const minY = Math.min(start.y, current.y);
+        const maxY = Math.max(start.y, current.y);
+        coords = [
+          [minX, minY],
+          [maxX, minY],
+          [maxX, maxY],
+          [minX, maxY],
+          [minX, minY],
+        ].map(([x, y]) => {
+          const ll = moduleToLngLat(roof, x, y)!;
+          return [ll.lng, ll.lat];
+        });
+      }
+    }
+
+    rectSource?.setData(
+      coords
+        ? { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [coords] } }] }
+        : emptyFC()
+    );
+  }, [boxSelect, mouseLngLat, roofs, styleLoaded]);
+
   function finishDrawing(points: [number, number][]) {
     if (points.length < 3) return;
     const ring = [...points, points[0]]; // GeoJSON polygons must close
@@ -839,17 +1014,13 @@ export default function MapView({
       )}
       {pendingPlacement && (
         <div className="draw-toolbar">
-          <span>
-            {placementError ??
-              (pendingPlacement.kind === "move"
-                ? `Click where ${
-                    pendingPlacement.moduleIds.length === 1
-                      ? "this module"
-                      : `these ${pendingPlacement.moduleIds.length} modules`
-                  } should land`
-                : "Click inside a roof to place a module")}
-          </span>
+          <span>{placementError ?? "Click inside a roof to place a module"}</span>
           <button onClick={onCancelPlacement}>Cancel</button>
+        </div>
+      )}
+      {!drawing && !pendingPlacement && placementError && (
+        <div className="draw-toolbar">
+          <span>{placementError}</span>
         </div>
       )}
     </div>
