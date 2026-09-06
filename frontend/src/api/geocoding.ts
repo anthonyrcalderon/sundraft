@@ -39,3 +39,19 @@ export async function searchAddress(query: string): Promise<GeocodeResult[]> {
     lat: parseFloat(r.lat),
   }));
 }
+
+// A short "123 Main Street" name from a full Nominatim display_name like
+// "1600, Pennsylvania Avenue Northwest, Washington, District of Columbia,
+// 20500, United States" — used to auto-name a still-untitled project once
+// its address is set. Nominatim splits the house number into its own
+// leading segment for a queried street address, so the street name is
+// re-joined from the first two segments; a landmark search (no leading
+// number, e.g. "White House, 1600, ...") has nothing to join, so its own
+// first segment is used as-is.
+export function streetAddressFromPlaceName(placeName: string): string {
+  const parts = placeName.split(",").map((s) => s.trim());
+  if (parts.length >= 2 && /^\d+[A-Za-z]?$/.test(parts[0])) {
+    return `${parts[0]} ${parts[1]}`;
+  }
+  return parts[0] || placeName;
+}

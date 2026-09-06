@@ -45,6 +45,16 @@ export const updateProjectAddress = createAsyncThunk(
     })
 );
 
+export const updateProjectName = createAsyncThunk(
+  "projects/updateName",
+  (args: { id: string; name: string }) => api.updateProject(args.id, { name: args.name })
+);
+
+export const deleteProject = createAsyncThunk("projects/delete", async (id: string) => {
+  await api.deleteProject(id);
+  return id;
+});
+
 export const updateProjectRoofs = createAsyncThunk(
   "projects/updateRoofs",
   (args: { id: string; roofs: Roof[] }) =>
@@ -98,6 +108,13 @@ const projectsSlice = createSlice({
       .addCase(updateProjectModules.fulfilled, (state, action) => {
         const idx = state.items.findIndex((p) => p.id === action.payload.id);
         if (idx !== -1) state.items[idx] = action.payload;
+      })
+      .addCase(updateProjectName.fulfilled, (state, action) => {
+        const idx = state.items.findIndex((p) => p.id === action.payload.id);
+        if (idx !== -1) state.items[idx] = action.payload;
+      })
+      .addCase(deleteProject.fulfilled, (state, action) => {
+        state.items = state.items.filter((p) => p.id !== action.payload);
       });
   },
 });

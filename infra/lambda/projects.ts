@@ -15,7 +15,7 @@ import {
   ScanCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "node:crypto";
-import type { Project } from "sundraft-shared";
+import { DEFAULT_PROJECT_NAME, type Project } from "sundraft-shared";
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const TABLE_NAME = process.env.TABLE_NAME as string;
@@ -80,7 +80,7 @@ export const handler = async (
         id: randomUUID(),
         sessionId,
         isTemplate: false,
-        name: body.name || "Untitled design",
+        name: body.name || DEFAULT_PROJECT_NAME,
         address: body.address || null,
         lat: body.lat ?? null,
         lng: body.lng ?? null,

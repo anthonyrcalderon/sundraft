@@ -1,12 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../app/store";
 import {
   fetchProjects,
   createBlankProject,
   openProject,
+  deleteProject,
 } from "../features/projects/projectsSlice";
 import type { Project } from "../api/client";
+import { DEFAULT_PROJECT_NAME } from "sundraft-shared";
 
 interface Props {
   onOpen: (project: Project) => void;
@@ -29,10 +31,12 @@ export default function ProjectPicker({ onOpen }: Props) {
   }
 
   async function handleNewBlank() {
-    const result = await dispatch(
-      createBlankProject("Untitled design")
-    ).unwrap();
+    const result = await dispatch(createBlankProject(DEFAULT_PROJECT_NAME)).unwrap();
     onOpen(result);
+  }
+
+  function handleDelete(id: string) {
+    dispatch(deleteProject(id));
   }
 
   return (
@@ -49,8 +53,14 @@ export default function ProjectPicker({ onOpen }: Props) {
         </p>
       )}
 
-      <ProjectListSection title="Examples" projects={templates} onOpen={handleOpen} />
-      <ProjectListSection title="Your projects" projects={myProjects} onOpen={handleOpen} />
+      <ProjectListSection title="Examples" projects={templates} actionLabel="Clone" onOpen={handleOpen} />
+      <ProjectListSection
+        title="Your projects"
+        projects={myProjects}
+        actionLabel="Open"
+        onOpen={handleOpen}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }
@@ -58,12 +68,21 @@ export default function ProjectPicker({ onOpen }: Props) {
 function ProjectListSection({
   title,
   projects,
+  actionLabel,
   onOpen,
+  onDelete,
 }: {
   title: string;
   projects: Project[];
+  actionLabel: string;
   onOpen: (project: Project) => void;
+  onDelete?: (id: string) => void;
 }) {
+  // Deleting a project throws away every roof and module in it with no way
+  // back, same stakes as deleting a roof — so it gets the same "are you
+  // sure?" confirm step instead of acting immediately.
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
   if (projects.length === 0) return null;
 
   return (
@@ -73,7 +92,30 @@ function ProjectListSection({
         {projects.map((p) => (
           <li key={p.id}>
             <span>{p.name}</span>
-            <button onClick={() => onOpen(p)}>Open</button>
+            {onDelete && confirmingDeleteId === p.id ? (
+              <span className="project-list-confirm">
+                <span className="muted small">Delete this project?</span>
+                <button
+                  className="danger-button"
+                  onClick={() => {
+                    onDelete(p.id);
+                    setConfirmingDeleteId(null);
+                  }}
+                >
+                  Yes
+                </button>
+                <button onClick={() => setConfirmingDeleteId(null)}>Cancel</button>
+              </span>
+            ) : (
+              <span className="project-list-actions">
+                <button onClick={() => onOpen(p)}>{actionLabel}</button>
+                {onDelete && (
+                  <button className="danger-button" onClick={() => setConfirmingDeleteId(p.id)}>
+                    Delete
+                  </button>
+                )}
+              </span>
+            )}
           </li>
         ))}
       </ul>
