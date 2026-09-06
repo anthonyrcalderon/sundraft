@@ -92,6 +92,51 @@ export default function RoofList({
   return (
     <section>
       <h2>Roofs ({roofs.length})</h2>
+
+      {selectedRoof && (
+        <div className="roof-detail-controls">
+          <span className="muted small">Selected roof</span>
+          {isEditingRoof ? (
+            confirmingDelete ? (
+              <>
+                <span className="muted small">Delete this roof?</span>
+                <button
+                  className="danger-button"
+                  onClick={() => {
+                    onDelete(selectedRoof.id);
+                    setConfirmingDelete(false);
+                  }}
+                >
+                  Yes
+                </button>
+                <button onClick={() => setConfirmingDelete(false)}>Cancel</button>
+              </>
+            ) : (
+              <>
+                <button onClick={onToggleEditRoof} disabled={disabled}>
+                  Done
+                </button>
+                <button className="danger-button" onClick={() => setConfirmingDelete(true)} disabled={disabled}>
+                  Delete Roof
+                </button>
+              </>
+            )
+          ) : (
+            <>
+              <button onClick={onToggleEditRoof} disabled={disabled || selectedRoofModules.length > 0}>
+                Edit
+              </button>
+              <button onClick={() => onFill(selectedRoof.id)} disabled={disabled}>
+                Fill
+              </button>
+              <button onClick={() => onClear(selectedRoof.id)} disabled={disabled || selectedRoofModules.length === 0}>
+                Clear
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       <ul className="roof-list">
         {roofs.map((r) => {
           const roofModules = modules.filter((m) => m.roofId === r.id);
@@ -148,50 +193,6 @@ export default function RoofList({
           );
         })}
       </ul>
-
-      {selectedRoof && (
-        <div className="roof-detail-controls">
-          <span className="muted small">Selected roof</span>
-          {isEditingRoof ? (
-            confirmingDelete ? (
-              <>
-                <span className="muted small">Delete this roof?</span>
-                <button
-                  className="danger-button"
-                  onClick={() => {
-                    onDelete(selectedRoof.id);
-                    setConfirmingDelete(false);
-                  }}
-                >
-                  Yes
-                </button>
-                <button onClick={() => setConfirmingDelete(false)}>Cancel</button>
-              </>
-            ) : (
-              <>
-                <button onClick={onToggleEditRoof} disabled={disabled}>
-                  Done
-                </button>
-                <button className="danger-button" onClick={() => setConfirmingDelete(true)} disabled={disabled}>
-                  Delete Roof
-                </button>
-              </>
-            )
-          ) : (
-            <>
-              <button onClick={onToggleEditRoof} disabled={disabled || selectedRoofModules.length > 0}>
-                Edit
-              </button>
-              <button onClick={() => onFill(selectedRoof.id)} disabled={disabled}>
-                Fill
-              </button>
-              <button onClick={() => onClear(selectedRoof.id)} disabled={disabled || selectedRoofModules.length === 0}>
-                Clear
-              </button>
-            </>
-          )}
-        </div>
-      )}
     </section>
   );
 }
