@@ -10,7 +10,7 @@
 // rendering/DOM concerns), and the same containment/overlap rules will
 // eventually need to run server-side too (e.g. validating a placement on
 // the real backend, not just trusting whatever the client sends).
-import type { Module, ModuleOrientation, ModuleType, Roof } from "./project";
+import type { Module, ModuleOrientation, ModuleType, Obstruction, Roof } from "./project";
 
 const METERS_PER_DEGREE_LAT = 111_320;
 
@@ -206,9 +206,27 @@ function overlaps(a: Aabb, b: Aabb): boolean {
   );
 }
 
+// Closest point on an axis-aligned rect to a circle's center, compared
+// against the radius — the standard circle/AABB overlap test. Used for
+// module-vs-obstruction checks since a circular obstruction isn't itself an
+// AABB the way everything else in this file is.
+function circleOverlapsRect(cx: number, cy: number, r: number, rect: Aabb): boolean {
+  const closestX = Math.min(Math.max(cx, rect.minX), rect.maxX);
+  const closestY = Math.min(Math.max(cy, rect.minY), rect.maxY);
+  const distance = Math.hypot(cx - closestX, cy - closestY);
+  return distance + OVERLAP_EPSILON_METERS < r;
+}
+
+function rectOverlapsObstruction(rect: Aabb, obstruction: Obstruction): boolean {
+  return obstruction.shape.kind === "rectangle"
+    ? overlaps(rect, aabb(obstruction.x, obstruction.y, obstruction.shape.width, obstruction.shape.height))
+    : circleOverlapsRect(obstruction.x, obstruction.y, obstruction.shape.radius, rect);
+}
+
 // Would a module of `orientation`/`moduleTypeId` at (x, y) on a roof with
-// `tiltDeg` overlap any other module already on that roof? `excludeModuleId`
-// lets a module being moved skip colliding with its own current position.
+// `tiltDeg` overlap any other module, or any obstruction, already on that
+// roof? `excludeModuleId` lets a module being moved skip colliding with its
+// own current position.
 export function overlapsExisting(
   modules: Module[],
   moduleTypes: ModuleType[],
@@ -218,6 +236,7 @@ export function overlapsExisting(
   orientation: ModuleOrientation,
   moduleTypeId: string,
   tiltDeg: number,
+  obstructions: Obstruction[],
   excludeModuleId?: string
 ): boolean {
   const type = moduleTypes.find((t) => t.id === moduleTypeId);
@@ -225,7 +244,7 @@ export function overlapsExisting(
   const targetSize = effectiveSize(type, orientation, tiltDeg);
   const target = aabb(x, y, targetSize.w, targetSize.h);
 
-  return modules
+  const hitsModule = modules
     .filter((m) => m.roofId === roofId && m.id !== excludeModuleId)
     .some((m) => {
       const mType = moduleTypes.find((t) => t.id === m.moduleTypeId);
@@ -233,6 +252,9 @@ export function overlapsExisting(
       const { w, h } = effectiveSize(mType, m.orientation, tiltDeg);
       return overlaps(target, aabb(m.x, m.y, w, h));
     });
+  if (hitsModule) return true;
+
+  return obstructions.filter((o) => o.roofId === roofId).some((o) => rectOverlapsObstruction(target, o));
 }
 
 // Unlike `overlaps` above, touching at the boundary counts here — a rect
@@ -336,7 +358,8 @@ export function fillRoofWithModules(
   moduleType: ModuleType,
   orientation: ModuleOrientation,
   modules: Module[],
-  moduleTypes: ModuleType[]
+  moduleTypes: ModuleType[],
+  obstructions: Obstruction[]
 ): { x: number; y: number }[] {
   const origin = roofOrigin(roof);
   const outlineRing = roof.roofOutline?.coordinates[0] as [number, number][] | undefined;
@@ -368,6 +391,7 @@ export function fillRoofWithModules(
     const size = effectiveSize(mType, m.orientation, roof.tilt);
     existingAabbs.push(aabb(m.x, m.y, size.w, size.h));
   }
+  const roofObstructions = obstructions.filter((o) => o.roofId === roof.id);
 
   const placed: { x: number; y: number }[] = [];
   const placedAabbs: Aabb[] = [];
@@ -385,6 +409,7 @@ export function fillRoofWithModules(
       const candidate = aabb(x, y, w, h);
       const collides = [...existingAabbs, ...placedAabbs].some((other) => overlaps(candidate, other));
       if (collides) continue;
+      if (roofObstructions.some((o) => rectOverlapsObstruction(candidate, o))) continue;
 
       placed.push({ x, y });
       placedAabbs.push(candidate);
@@ -418,6 +443,7 @@ export function resolveGroupMove(
   modules: Module[],
   moduleTypes: ModuleType[],
   roofs: Roof[],
+  obstructions: Obstruction[],
   moduleIds: string[],
   anchorLngLat: LngLat,
   targetLngLat: LngLat
@@ -475,6 +501,11 @@ export function resolveGroupMove(
         return overlaps(target, aabb(other.x, other.y, otherSize.w, otherSize.h));
       });
     if (collides) return null;
+
+    const hitsObstruction = obstructions
+      .filter((o) => o.roofId === r.roofId)
+      .some((o) => rectOverlapsObstruction(target, o));
+    if (hitsObstruction) return null;
   }
 
   return results;
@@ -497,6 +528,47 @@ export function moduleRing(roof: Roof, module: Module, type: ModuleType): [numbe
   ];
   const ring: [number, number][] = [];
   for (const [x, y] of corners) {
+    const ll = moduleToLngLat(roof, x, y);
+    if (!ll) return null;
+    ring.push([ll.lng, ll.lat]);
+  }
+  return ring;
+}
+
+// How many segments approximate a circular obstruction's outline — enough
+// to look round at the zoom levels this app traces roofs at, without
+// bloating the GeoJSON for what's still just a small fixed-size shape.
+const CIRCLE_SEGMENTS = 32;
+
+// The closed ring of an obstruction's shape, in map lng/lat, ready to
+// become a GeoJSON Polygon — a rectangle's 4 corners, or a regular polygon
+// approximating a circle. No tilt foreshortening or azimuth-driven
+// orientation swap (see the Obstruction type): whatever footprint was
+// drawn/stretched on the map is rendered back out exactly as stored.
+function obstructionLocalRing(obstruction: Obstruction): [number, number][] {
+  const { x, y, shape } = obstruction;
+  if (shape.kind === "rectangle") {
+    const { width: w, height: h } = shape;
+    return [
+      [x - w / 2, y - h / 2],
+      [x + w / 2, y - h / 2],
+      [x + w / 2, y + h / 2],
+      [x - w / 2, y + h / 2],
+      [x - w / 2, y - h / 2],
+    ];
+  }
+
+  const points: [number, number][] = [];
+  for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
+    const theta = (i / CIRCLE_SEGMENTS) * 2 * Math.PI;
+    points.push([x + shape.radius * Math.cos(theta), y + shape.radius * Math.sin(theta)]);
+  }
+  return points;
+}
+
+export function obstructionRing(roof: Roof, obstruction: Obstruction): [number, number][] | null {
+  const ring: [number, number][] = [];
+  for (const [x, y] of obstructionLocalRing(obstruction)) {
     const ll = moduleToLngLat(roof, x, y);
     if (!ll) return null;
     ring.push([ll.lng, ll.lat]);

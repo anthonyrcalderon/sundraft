@@ -10,6 +10,7 @@
       "lng": -77.0365,
       "roofs": [],
       "modules": [],
+      "obstructions": [],
       "createdAt": "2026-08-12T00:00:00.000Z",
       "updatedAt": "2026-08-12T00:00:00.000Z"
     },
@@ -23,6 +24,7 @@
       "lng": -73.9857,
       "roofs": [],
       "modules": [],
+      "obstructions": [],
       "createdAt": "2026-08-12T00:00:00.000Z",
       "updatedAt": "2026-08-12T00:00:00.000Z"
     }

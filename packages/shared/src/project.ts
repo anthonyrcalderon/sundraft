@@ -43,6 +43,27 @@ export interface Module {
   orientation: ModuleOrientation;
 }
 
+// A roof-mounted object a module can't be placed on top of — a vent,
+// chimney, HVAC unit, skylight, etc. Drawn and stretched directly on the
+// map (see MapView), so its stored size is exactly the footprint the user
+// drew — unlike Module, there's no real-world catalog spec to foreshorten
+// from, so ObstructionShape carries no tilt-derived sizing at all.
+export type ObstructionShape =
+  | { kind: "rectangle"; width: number; height: number }
+  | { kind: "circle"; radius: number };
+
+// An obstruction has no azimuth of its own, same reasoning as Module: it's
+// flush with whichever Roof it belongs to, and x/y live in that roof's own
+// local (azimuth-rotated) frame — the same frame Module.x/y use — so
+// obstruction/module overlap checks never need a coordinate conversion.
+export interface Obstruction {
+  id: string;
+  roofId: string;
+  x: number; // roof-local meters, shape center
+  y: number;
+  shape: ObstructionShape;
+}
+
 // The name a newly created (not yet renamed) project starts with. Also the
 // sentinel a project's current name is checked against to decide whether
 // setting its address should auto-name it too — once a project has any
@@ -60,6 +81,7 @@ export interface Project {
   lng: number | null;
   roofs: Roof[];
   modules: Module[];
+  obstructions: Obstruction[];
   createdAt: string;
   updatedAt: string;
 }

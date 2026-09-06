@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { api, type Project } from "../../api/client";
-import type { Module, Roof } from "sundraft-shared";
+import type { Module, Obstruction, Roof } from "sundraft-shared";
 
 interface ProjectsState {
   items: Project[];
@@ -67,6 +67,12 @@ export const updateProjectModules = createAsyncThunk(
     api.updateProject(args.id, { modules: args.modules })
 );
 
+export const updateProjectObstructions = createAsyncThunk(
+  "projects/updateObstructions",
+  (args: { id: string; obstructions: Obstruction[] }) =>
+    api.updateProject(args.id, { obstructions: args.obstructions })
+);
+
 const projectsSlice = createSlice({
   name: "projects",
   initialState,
@@ -106,6 +112,10 @@ const projectsSlice = createSlice({
         if (idx !== -1) state.items[idx] = action.payload;
       })
       .addCase(updateProjectModules.fulfilled, (state, action) => {
+        const idx = state.items.findIndex((p) => p.id === action.payload.id);
+        if (idx !== -1) state.items[idx] = action.payload;
+      })
+      .addCase(updateProjectObstructions.fulfilled, (state, action) => {
         const idx = state.items.findIndex((p) => p.id === action.payload.id);
         if (idx !== -1) state.items[idx] = action.payload;
       })

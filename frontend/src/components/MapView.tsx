@@ -7,6 +7,8 @@ import {
   type Module,
   type ModuleOrientation,
   type ModuleType,
+  type Obstruction,
+  type ObstructionShape,
   type Roof,
   findContainingRoof,
   lngLatToMeters,
@@ -15,6 +17,7 @@ import {
   moduleRing,
   moduleToLngLat,
   modulesTouchingRect,
+  obstructionRing,
   overlapsExisting,
   resolveGroupMove,
   snapToAdjacentModule,
@@ -84,6 +87,14 @@ const CLOSING_GUIDE_EXTENT_PX = 8000;
 // click still has.
 const DRAG_MIN_PX = 6;
 
+// Screen-pixel hit radius for grabbing a resize handle — generous relative
+// to the small dot it's rendered as, since a handle is a deliberate target
+// you're aiming for, not something to miss by a pixel and lose the drag.
+const HANDLE_HIT_PX = 12;
+// Floor on an obstruction's width/height/radius so stretching a handle
+// past its opposite edge can't collapse it to a sliver or a point.
+const MIN_OBSTRUCTION_SIZE_METERS = 0.2;
+
 const ROOFS_SOURCE_ID = "roofs";
 const DRAFT_LINE_SOURCE_ID = "draft-line";
 const DRAFT_POINTS_SOURCE_ID = "draft-points";
@@ -91,6 +102,10 @@ const CLOSING_GUIDE_SOURCE_ID = "closing-guide-line";
 const SELECT_RECT_SOURCE_ID = "select-rect";
 const MODULES_SOURCE_ID = "modules";
 const MODULES_FILL_LAYER_ID = "modules-fill";
+const OBSTRUCTIONS_SOURCE_ID = "obstructions";
+const OBSTRUCTIONS_FILL_LAYER_ID = "obstructions-fill";
+const OBSTRUCTION_HANDLES_SOURCE_ID = "obstruction-handles";
+const OBSTRUCTION_HANDLES_LAYER_ID = "obstruction-handles";
 
 const emptyFC = (): GeoJSON.FeatureCollection => ({
   type: "FeatureCollection",
@@ -100,6 +115,59 @@ const emptyFC = (): GeoJSON.FeatureCollection => ({
 export interface PendingPlacement {
   moduleTypeId: string;
   orientation: ModuleOrientation;
+}
+
+export type PendingObstructionShape = "rectangle" | "circle";
+
+// The corner of an obstruction's rectangle a resize handle sits at, or the
+// single point on a circle's edge (fixed at its local +x direction) its one
+// handle sits at.
+type ObstructionHandle = "minXminY" | "maxXminY" | "maxXmaxY" | "minXmaxY" | "radius";
+
+// A rectangle's four roof-local corners, keyed the same way ObstructionHandle
+// names them — used both to place handle markers and, during a resize, to
+// find the corner diagonally opposite whichever one is being dragged (which
+// stays fixed for the whole gesture).
+function obstructionRectCorners(
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): Record<Exclude<ObstructionHandle, "radius">, { x: number; y: number }> {
+  const halfW = width / 2;
+  const halfH = height / 2;
+  return {
+    minXminY: { x: x - halfW, y: y - halfH },
+    maxXminY: { x: x + halfW, y: y - halfH },
+    maxXmaxY: { x: x + halfW, y: y + halfH },
+    minXmaxY: { x: x - halfW, y: y + halfH },
+  };
+}
+
+const OPPOSITE_CORNER: Record<Exclude<ObstructionHandle, "radius">, Exclude<ObstructionHandle, "radius">> = {
+  minXminY: "maxXmaxY",
+  maxXminY: "minXmaxY",
+  maxXmaxY: "minXminY",
+  minXmaxY: "maxXminY",
+};
+
+// Every resize-handle position (roof-local) for an obstruction's current
+// shape, each tagged with which handle it is — shared by both the handle
+// rendering effect and the mousedown hit-test below, so the two can never
+// disagree about where a handle actually is.
+function obstructionHandlePoints(
+  x: number,
+  y: number,
+  shape: ObstructionShape
+): { handle: ObstructionHandle; x: number; y: number }[] {
+  if (shape.kind === "circle") {
+    return [{ handle: "radius", x: x + shape.radius, y }];
+  }
+  const corners = obstructionRectCorners(x, y, shape.width, shape.height);
+  return (Object.keys(corners) as Exclude<ObstructionHandle, "radius">[]).map((handle) => ({
+    handle,
+    ...corners[handle],
+  }));
 }
 
 // The closest vertex among every existing roof's outline to `screenPoint`,
@@ -332,6 +400,13 @@ interface Props {
   onRectSelect: (roofId: string, moduleIds: string[]) => void;
   selectedRoofId: string | null;
   onRoofClick: (id: string) => void;
+  obstructions: Obstruction[];
+  pendingObstructionShape: PendingObstructionShape | null;
+  onObstructionDrawn: (roofId: string, shape: ObstructionShape, x: number, y: number) => void;
+  onCancelObstructionDraw: () => void;
+  selectedObstructionId: string | null;
+  onObstructionClick: (id: string | null) => void;
+  onObstructionChange: (id: string, x: number, y: number, shape: ObstructionShape) => void;
 }
 
 // A select-rectangle drag in progress: the roof it started on (the only
@@ -356,6 +431,141 @@ interface ModuleDrag {
   grabbedModuleId: string;
   startLngLat: LngLat;
   startScreen: { x: number; y: number };
+}
+
+// A new obstruction being drawn by dragging across a roof: one corner (or,
+// for a circle, the center) at the drag's start, the other end following
+// the cursor — the same "opposite corners" mechanic the select-rectangle
+// already uses.
+interface ObstructionDraft {
+  roofId: string;
+  kind: PendingObstructionShape;
+  startLngLat: LngLat;
+  startScreen: { x: number; y: number };
+}
+
+// An existing obstruction being repositioned by dragging its body. Simpler
+// than ModuleDrag: always exactly one obstruction, and it stays on the roof
+// it started on rather than being re-evaluated against every roof on drop.
+interface ObstructionDrag {
+  obstructionId: string;
+  roofId: string;
+  startLngLat: LngLat;
+  startScreen: { x: number; y: number };
+}
+
+// An existing obstruction being resized by dragging one of its handles.
+// The original shape/position are snapshotted at mousedown (not re-read
+// from the live obstructions array) so the corner/center a rectangle or
+// circle resizes around stays fixed for the whole gesture rather than
+// drifting if it were re-derived from an already-live-updated shape.
+interface ObstructionResize {
+  obstructionId: string;
+  roofId: string;
+  handle: ObstructionHandle;
+  originalX: number;
+  originalY: number;
+  originalShape: ObstructionShape;
+}
+
+// Where an in-progress resize's dragged handle actually is right now. A
+// corner handle just puts that corner exactly under the cursor (unlike a
+// body-drag, a resize handle has no grab offset to preserve) with the
+// diagonally opposite corner — taken from the gesture's original snapshot,
+// never the live shape — held fixed; a circle's one handle sets the radius
+// to its distance from center. Both floor their result at
+// MIN_OBSTRUCTION_SIZE_METERS so dragging a handle past its opposite edge
+// can't collapse the shape to nothing.
+function resolveObstructionResize(
+  resize: ObstructionResize,
+  roof: Roof,
+  currentLngLat: LngLat
+): { x: number; y: number; shape: ObstructionShape } | null {
+  const cursorLocal = lngLatToModule(roof, currentLngLat);
+  if (!cursorLocal) return null;
+
+  if (resize.originalShape.kind === "circle") {
+    const radius = Math.max(
+      MIN_OBSTRUCTION_SIZE_METERS / 2,
+      Math.hypot(cursorLocal.x - resize.originalX, cursorLocal.y - resize.originalY)
+    );
+    return { x: resize.originalX, y: resize.originalY, shape: { kind: "circle", radius } };
+  }
+
+  const corners = obstructionRectCorners(
+    resize.originalX,
+    resize.originalY,
+    resize.originalShape.width,
+    resize.originalShape.height
+  );
+  // Safe: a rectangle obstruction's resize gesture only ever starts from
+  // one of the 4 corner handles, never "radius" — see handleMouseDown.
+  const fixed = corners[OPPOSITE_CORNER[resize.handle as Exclude<ObstructionHandle, "radius">]];
+
+  const minX = Math.min(cursorLocal.x, fixed.x);
+  const maxX = Math.max(cursorLocal.x, fixed.x);
+  const minY = Math.min(cursorLocal.y, fixed.y);
+  const maxY = Math.max(cursorLocal.y, fixed.y);
+  return {
+    x: (minX + maxX) / 2,
+    y: (minY + maxY) / 2,
+    shape: {
+      kind: "rectangle",
+      width: Math.max(MIN_OBSTRUCTION_SIZE_METERS, maxX - minX),
+      height: Math.max(MIN_OBSTRUCTION_SIZE_METERS, maxY - minY),
+    },
+  };
+}
+
+// Where an in-progress body-drag has carried an obstruction to — the same
+// "re-express current position in the drag's start frame, add the cursor's
+// delta, convert back" trick the module-drag preview uses, so the obstruction
+// follows the cursor's actual movement rather than snapping its center to
+// wherever the cursor now is.
+function resolveObstructionMove(
+  drag: ObstructionDrag,
+  obstruction: Obstruction,
+  roof: Roof,
+  currentLngLat: LngLat
+): { x: number; y: number } | null {
+  const currentObstructionLngLat = moduleToLngLat(roof, obstruction.x, obstruction.y);
+  if (!currentObstructionLngLat) return null;
+  const relative = lngLatToMeters(drag.startLngLat, currentObstructionLngLat);
+  const delta = lngLatToMeters(drag.startLngLat, currentLngLat);
+  const newLngLat = metersToLngLat(drag.startLngLat, relative.x + delta.x, relative.y + delta.y);
+  return lngLatToModule(roof, newLngLat);
+}
+
+// A new obstruction's shape while it's still being dragged out — the same
+// "opposite corners" rectangle math the select-rectangle uses, or a circle
+// whose radius is the cursor's distance from the drag's start.
+function resolveObstructionDraft(
+  draft: ObstructionDraft,
+  roof: Roof,
+  currentLngLat: LngLat
+): { x: number; y: number; shape: ObstructionShape } | null {
+  const start = lngLatToModule(roof, draft.startLngLat);
+  const cursor = lngLatToModule(roof, currentLngLat);
+  if (!start || !cursor) return null;
+
+  if (draft.kind === "circle") {
+    const radius = Math.max(MIN_OBSTRUCTION_SIZE_METERS / 2, Math.hypot(cursor.x - start.x, cursor.y - start.y));
+    return { x: start.x, y: start.y, shape: { kind: "circle", radius } };
+  }
+
+  const minX = Math.min(start.x, cursor.x);
+  const maxX = Math.max(start.x, cursor.x);
+  const minY = Math.min(start.y, cursor.y);
+  const maxY = Math.max(start.y, cursor.y);
+  return {
+    x: (minX + maxX) / 2,
+    y: (minY + maxY) / 2,
+    shape: {
+      kind: "rectangle",
+      width: Math.max(MIN_OBSTRUCTION_SIZE_METERS, maxX - minX),
+      height: Math.max(MIN_OBSTRUCTION_SIZE_METERS, maxY - minY),
+    },
+  };
 }
 
 // Where a group-move drag's rigid translation actually goes, as an
@@ -427,6 +637,13 @@ export default function MapView({
   onRectSelect,
   selectedRoofId,
   onRoofClick,
+  obstructions,
+  pendingObstructionShape,
+  onObstructionDrawn,
+  onCancelObstructionDraw,
+  selectedObstructionId,
+  onObstructionClick,
+  onObstructionChange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -435,6 +652,9 @@ export default function MapView({
   const [placementError, setPlacementError] = useState<string | null>(null);
   const [mouseLngLat, setMouseLngLat] = useState<LngLat | null>(null);
   const [boxSelect, setBoxSelect] = useState<BoxSelect | null>(null);
+  const [obstructionDraft, setObstructionDraft] = useState<ObstructionDraft | null>(null);
+  const [obstructionDrag, setObstructionDrag] = useState<ObstructionDrag | null>(null);
+  const [obstructionResize, setObstructionResize] = useState<ObstructionResize | null>(null);
   const [moduleDrag, setModuleDrag] = useState<ModuleDrag | null>(null);
 
   // Create the map once.
@@ -483,6 +703,39 @@ export default function MapView({
         type: "line",
         source: MODULES_SOURCE_ID,
         paint: { "line-color": "#ffee58", "line-width": 1 },
+      });
+
+      // Obstructions (vents, chimneys, HVAC units) — a neutral gray/black so
+      // they read as "physical object in the way," clearly distinct from
+      // both a roof (orange/teal) and a module (indigo/yellow). Selected
+      // gets a red outline, the universal "avoid/don't place here" cue.
+      map.addSource(OBSTRUCTIONS_SOURCE_ID, { type: "geojson", data: emptyFC() });
+      map.addLayer({
+        id: OBSTRUCTIONS_FILL_LAYER_ID,
+        type: "fill",
+        source: OBSTRUCTIONS_SOURCE_ID,
+        paint: { "fill-color": "#616161", "fill-opacity": 0.6 },
+      });
+      map.addLayer({
+        id: "obstructions-outline",
+        type: "line",
+        source: OBSTRUCTIONS_SOURCE_ID,
+        paint: { "line-color": "#212121", "line-width": 2 },
+      });
+
+      // Resize handles for the selected obstruction — small enough to read
+      // as a control, not a design element, matching draft-points' style.
+      map.addSource(OBSTRUCTION_HANDLES_SOURCE_ID, { type: "geojson", data: emptyFC() });
+      map.addLayer({
+        id: OBSTRUCTION_HANDLES_LAYER_ID,
+        type: "circle",
+        source: OBSTRUCTION_HANDLES_SOURCE_ID,
+        paint: {
+          "circle-radius": 5,
+          "circle-color": "#ffffff",
+          "circle-stroke-color": "#212121",
+          "circle-stroke-width": 1.5,
+        },
       });
 
       // The marquee drawn while dragging a select-rectangle across a roof.
@@ -605,6 +858,96 @@ export default function MapView({
     source?.setData({ type: "FeatureCollection", features });
   }, [modules, roofs, moduleTypes, styleLoaded, moduleDrag, mouseLngLat]);
 
+  // Keep obstructions in sync with the source of truth, live-previewing
+  // whichever one (if any) is currently being drawn, moved, or resized —
+  // same "show it happening, not just the result" approach as the module
+  // drag preview above.
+  useEffect(() => {
+    if (!mapRef.current || !styleLoaded) return;
+    const source = mapRef.current.getSource(OBSTRUCTIONS_SOURCE_ID) as maplibregl.GeoJSONSource;
+
+    const features: GeoJSON.Feature[] = [];
+    for (const o of obstructions) {
+      const roof = roofs.find((r) => r.id === o.roofId);
+      if (!roof) continue;
+
+      let live: { x: number; y: number; shape: ObstructionShape } = { x: o.x, y: o.y, shape: o.shape };
+      if (obstructionDrag && obstructionDrag.obstructionId === o.id && mouseLngLat) {
+        const moved = resolveObstructionMove(obstructionDrag, o, roof, mouseLngLat);
+        if (moved) live = { ...live, ...moved };
+      } else if (obstructionResize && obstructionResize.obstructionId === o.id && mouseLngLat) {
+        const resized = resolveObstructionResize(obstructionResize, roof, mouseLngLat);
+        if (resized) live = resized;
+      }
+
+      const ring = obstructionRing(roof, { ...o, x: live.x, y: live.y, shape: live.shape });
+      if (!ring) continue;
+      features.push({ type: "Feature", properties: { id: o.id }, geometry: { type: "Polygon", coordinates: [ring] } });
+    }
+
+    if (obstructionDraft && mouseLngLat) {
+      const roof = roofs.find((r) => r.id === obstructionDraft.roofId);
+      const draft = roof && resolveObstructionDraft(obstructionDraft, roof, mouseLngLat);
+      if (roof && draft) {
+        const ring = obstructionRing(roof, { id: "draft", roofId: roof.id, x: draft.x, y: draft.y, shape: draft.shape });
+        if (ring) {
+          features.push({ type: "Feature", properties: { id: "draft" }, geometry: { type: "Polygon", coordinates: [ring] } });
+        }
+      }
+    }
+
+    source?.setData({ type: "FeatureCollection", features });
+  }, [obstructions, roofs, styleLoaded, obstructionDrag, obstructionResize, obstructionDraft, mouseLngLat]);
+
+  // Render resize handles for the selected obstruction — hidden while it's
+  // being drawn fresh (no handles for a shape that doesn't exist yet) or
+  // dragged (handles would just be extra noise riding along with the move;
+  // a resize and a move are already mutually exclusive gestures anyway).
+  useEffect(() => {
+    if (!mapRef.current || !styleLoaded) return;
+    const source = mapRef.current.getSource(OBSTRUCTION_HANDLES_SOURCE_ID) as maplibregl.GeoJSONSource;
+
+    const selected = !obstructionDraft && !obstructionDrag && obstructions.find((o) => o.id === selectedObstructionId);
+    const roof = selected && roofs.find((r) => r.id === selected.roofId);
+
+    let handlePoints: { handle: ObstructionHandle; x: number; y: number }[] = [];
+    if (selected && roof) {
+      let live: { x: number; y: number; shape: ObstructionShape } = { x: selected.x, y: selected.y, shape: selected.shape };
+      if (obstructionResize && obstructionResize.obstructionId === selected.id && mouseLngLat) {
+        const resized = resolveObstructionResize(obstructionResize, roof, mouseLngLat);
+        if (resized) live = resized;
+      }
+      handlePoints = obstructionHandlePoints(live.x, live.y, live.shape);
+    }
+
+    const features: GeoJSON.Feature[] = [];
+    for (const { handle, x, y } of handlePoints) {
+      const ll = roof && moduleToLngLat(roof, x, y);
+      if (ll) {
+        features.push({ type: "Feature", properties: { handle }, geometry: { type: "Point", coordinates: [ll.lng, ll.lat] } });
+      }
+    }
+    source?.setData({ type: "FeatureCollection", features });
+  }, [obstructions, roofs, styleLoaded, selectedObstructionId, obstructionDraft, obstructionDrag, obstructionResize, mouseLngLat]);
+
+  // Highlight the selected obstruction with a red outline — the universal
+  // "don't place here" cue — leaving color choice free for everything else.
+  useEffect(() => {
+    if (!mapRef.current || !styleLoaded) return;
+    mapRef.current.setPaintProperty("obstructions-outline", "line-color", [
+      "case",
+      ["==", ["get", "id"], selectedObstructionId ?? ""],
+      "#ff5252",
+      "#212121",
+    ]);
+    mapRef.current.setPaintProperty("obstructions-outline", "line-width", [
+      "case",
+      ["==", ["get", "id"], selectedObstructionId ?? ""],
+      3,
+      2,
+    ]);
+  }, [selectedObstructionId, styleLoaded]);
+
   // Highlight every selected module.
   useEffect(() => {
     if (!mapRef.current || !styleLoaded) return;
@@ -638,6 +981,20 @@ export default function MapView({
     ]);
   }, [moduleDrag, styleLoaded]);
 
+  // Same fade for an obstruction being actively moved or resized, and for
+  // the same reason — seeing what's underneath (a module it'd now overlap,
+  // the roof edge) matters more mid-gesture than a solid fill does.
+  useEffect(() => {
+    if (!mapRef.current || !styleLoaded) return;
+    const activeId = obstructionDrag?.obstructionId ?? obstructionResize?.obstructionId ?? null;
+    mapRef.current.setPaintProperty(OBSTRUCTIONS_FILL_LAYER_ID, "fill-opacity", [
+      "case",
+      ["==", ["get", "id"], activeId ?? ""],
+      0.2,
+      0.6,
+    ]);
+  }, [obstructionDrag, obstructionResize, styleLoaded]);
+
   // Highlight the selected roof. Uses a distinct hue (orange -> teal, not
   // just a lighter/darker orange) plus a visibly thicker outline, so the
   // selection doesn't rely on color alone — orange/teal also stays
@@ -666,17 +1023,17 @@ export default function MapView({
   }, [selectedRoofId, styleLoaded]);
 
   // Track the cursor while a roof is being traced, a select-rectangle drag
-  // is in progress, or a group of already-selected modules is being
-  // dragged, to drive the preview lines/rectangle/live module positions
-  // below. Listens on the canvas directly (rather than MapLibre's own
-  // "mousemove" event) because both drags hold the mouse button down
-  // throughout — with dragPan disabled for them and no other gesture
-  // handler claiming it, MapLibre's own handler pipeline doesn't forward
-  // that movement as a "mousemove" event at all, so this is the one case
-  // that actually needs the raw DOM event underneath it.
+  // is in progress, a group of already-selected modules is being dragged,
+  // or an obstruction is being drawn/moved/resized, to drive the preview
+  // lines/rectangle/live positions below. Listens on the canvas directly
+  // (rather than MapLibre's own "mousemove" event) because these drags hold
+  // the mouse button down throughout — with dragPan disabled for them and
+  // no other gesture handler claiming it, MapLibre's own handler pipeline
+  // doesn't forward that movement as a "mousemove" event at all, so this is
+  // the one case that actually needs the raw DOM event underneath it.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || (!drawing && !boxSelect && !moduleDrag)) {
+    if (!map || (!drawing && !boxSelect && !moduleDrag && !obstructionDraft && !obstructionDrag && !obstructionResize)) {
       setMouseLngLat(null);
       return;
     }
@@ -690,7 +1047,7 @@ export default function MapView({
     return () => {
       canvas.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [drawing, boxSelect, moduleDrag]);
+  }, [drawing, boxSelect, moduleDrag, obstructionDraft, obstructionDrag, obstructionResize]);
 
   // Reset any in-progress trace/placement error when the relevant mode starts.
   useEffect(() => {
@@ -701,17 +1058,29 @@ export default function MapView({
     setPlacementError(null);
   }, [pendingPlacement]);
 
+  // If the parent cancels obstruction-draw mode (Cancel button, Escape)
+  // mid-drag, clean up the drag itself rather than leaving dragPan disabled
+  // and a phantom draft behind.
+  useEffect(() => {
+    if (pendingObstructionShape) return;
+    setObstructionDraft((prev) => {
+      if (prev) mapRef.current?.dragPan.enable();
+      return null;
+    });
+  }, [pendingObstructionShape]);
+
   // Single click handler covering all three interaction modes: tracing a
   // roof, placing a module, or (idle) selecting one.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    map.getCanvas().style.cursor = moduleDrag
-      ? "grabbing"
-      : drawing || !!pendingPlacement || !!boxSelect
-        ? "crosshair"
-        : "";
+    map.getCanvas().style.cursor =
+      moduleDrag || obstructionDrag || obstructionResize
+        ? "grabbing"
+        : drawing || !!pendingPlacement || !!boxSelect || !!pendingObstructionShape || !!obstructionDraft
+          ? "crosshair"
+          : "";
 
     function handleClick(e: maplibregl.MapMouseEvent) {
       if (drawing) {
@@ -745,6 +1114,11 @@ export default function MapView({
         return;
       }
 
+      // Drawing an obstruction is a drag gesture end-to-end (see
+      // handleMouseDown/handleMouseUp) — a plain click here has nothing to
+      // do.
+      if (pendingObstructionShape) return;
+
       if (pendingPlacement) {
         const point: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         const roof = findContainingRoof(roofs, point);
@@ -769,8 +1143,20 @@ export default function MapView({
           roof.tilt
         );
         const { x, y } = snapped ?? local;
-        if (overlapsExisting(modules, moduleTypes, roof.id, x, y, pendingPlacement.orientation, pendingPlacement.moduleTypeId, roof.tilt)) {
-          setPlacementError("Modules can't overlap — try another spot");
+        if (
+          overlapsExisting(
+            modules,
+            moduleTypes,
+            roof.id,
+            x,
+            y,
+            pendingPlacement.orientation,
+            pendingPlacement.moduleTypeId,
+            roof.tilt,
+            obstructions
+          )
+        ) {
+          setPlacementError("Modules can't overlap another module or obstruction — try another spot");
           return;
         }
         // Placement mode stays open for the next module (see
@@ -784,11 +1170,20 @@ export default function MapView({
         return;
       }
 
-      // Idle: clicking a module adds it to the selection (shift/ctrl/cmd
-      // removes an already-selected one) and clears any roof selection.
-      // Missing every module but still landing inside a roof selects that
-      // roof instead (toggling it off if it's already selected) and clears
-      // module selection. Missing everything clears both.
+      // Idle: clicking an obstruction selects it (clearing module/roof
+      // selection — see OpenedProjectView). Otherwise, clicking a module
+      // adds it to the selection (shift/ctrl/cmd removes an already-
+      // selected one) and clears any roof selection. Missing every module
+      // but still landing inside a roof selects that roof instead (toggling
+      // it off if it's already selected) and clears module selection.
+      // Missing everything clears all three.
+      const obstructionHits = map!.queryRenderedFeatures(e.point, { layers: [OBSTRUCTIONS_FILL_LAYER_ID] });
+      const obstructionHitId = obstructionHits[0]?.properties?.id as string | undefined;
+      if (obstructionHitId) {
+        onObstructionClick(obstructionHitId);
+        return;
+      }
+
       const hits = map!.queryRenderedFeatures(e.point, { layers: [MODULES_FILL_LAYER_ID] });
       const hitId = hits[0]?.properties?.id as string | undefined;
 
@@ -815,7 +1210,7 @@ export default function MapView({
     // selecting the module's subarray instead, with this whole-roof
     // behavior demoted to a modifier, e.g. shift+double-click — not dropped.
     function handleDoubleClick(e: maplibregl.MapMouseEvent) {
-      if (drawing || pendingPlacement) return;
+      if (drawing || pendingPlacement || pendingObstructionShape) return;
       const hits = map!.queryRenderedFeatures(e.point, { layers: [MODULES_FILL_LAYER_ID] });
       const hitId = hits[0]?.properties?.id as string | undefined;
       const roofId = hitId ? modules.find((m) => m.id === hitId)?.roofId : undefined;
@@ -829,6 +1224,70 @@ export default function MapView({
     // MapLibre's own pan gesture from ever grabbing it.
     function handleMouseDown(e: maplibregl.MapMouseEvent) {
       if (drawing || pendingPlacement) return;
+
+      // Drawing a new obstruction takes priority over everything else idle
+      // mode would otherwise do with a drag starting inside a roof.
+      if (pendingObstructionShape) {
+        const roof = findContainingRoof(roofs, [e.lngLat.lng, e.lngLat.lat]);
+        if (!roof) return;
+        map!.dragPan.disable();
+        setPlacementError(null);
+        setObstructionDraft({
+          roofId: roof.id,
+          kind: pendingObstructionShape,
+          startLngLat: { lng: e.lngLat.lng, lat: e.lngLat.lat },
+          startScreen: { x: e.point.x, y: e.point.y },
+        });
+        return;
+      }
+
+      // A resize handle (or the body, to move it) only ever grabs the
+      // already-selected obstruction — same "must already be selected"
+      // rule as picking up a module to move it.
+      if (selectedObstructionId) {
+        const selected = obstructions.find((o) => o.id === selectedObstructionId);
+        const obstructionRoof = selected && roofs.find((r) => r.id === selected.roofId);
+        if (selected && obstructionRoof) {
+          let closestHandle: ObstructionHandle | null = null;
+          let closestDist = HANDLE_HIT_PX;
+          for (const point of obstructionHandlePoints(selected.x, selected.y, selected.shape)) {
+            const ll = moduleToLngLat(obstructionRoof, point.x, point.y);
+            if (!ll) continue;
+            const dist = e.point.dist(map!.project([ll.lng, ll.lat]));
+            if (dist <= closestDist) {
+              closestDist = dist;
+              closestHandle = point.handle;
+            }
+          }
+          if (closestHandle) {
+            map!.dragPan.disable();
+            setPlacementError(null);
+            setObstructionResize({
+              obstructionId: selected.id,
+              roofId: obstructionRoof.id,
+              handle: closestHandle,
+              originalX: selected.x,
+              originalY: selected.y,
+              originalShape: selected.shape,
+            });
+            return;
+          }
+
+          const bodyHits = map!.queryRenderedFeatures(e.point, { layers: [OBSTRUCTIONS_FILL_LAYER_ID] });
+          const bodyHitId = bodyHits[0]?.properties?.id as string | undefined;
+          if (bodyHitId === selected.id) {
+            map!.dragPan.disable();
+            setPlacementError(null);
+            setObstructionDrag({
+              obstructionId: selected.id,
+              roofId: obstructionRoof.id,
+              startLngLat: { lng: e.lngLat.lng, lat: e.lngLat.lat },
+              startScreen: { x: e.point.x, y: e.point.y },
+            });
+            return;
+          }
+        }
+      }
 
       const hits = map!.queryRenderedFeatures(e.point, { layers: [MODULES_FILL_LAYER_ID] });
       const hitId = hits[0]?.properties?.id as string | undefined;
@@ -856,6 +1315,53 @@ export default function MapView({
     }
 
     function handleMouseUp(e: maplibregl.MapMouseEvent) {
+      const currentLngLat = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+
+      if (obstructionDraft) {
+        map!.dragPan.enable();
+        setObstructionDraft(null);
+
+        // Barely moved (or didn't at all) — a real drag is how an
+        // obstruction gets its size, so a stray click here just does
+        // nothing rather than leaving a MIN_OBSTRUCTION_SIZE_METERS speck.
+        const dragDistance = e.point.dist(
+          new maplibregl.Point(obstructionDraft.startScreen.x, obstructionDraft.startScreen.y)
+        );
+        if (dragDistance < DRAG_MIN_PX) return;
+
+        const roof = roofs.find((r) => r.id === obstructionDraft.roofId);
+        const resolved = roof && resolveObstructionDraft(obstructionDraft, roof, currentLngLat);
+        if (resolved) onObstructionDrawn(obstructionDraft.roofId, resolved.shape, resolved.x, resolved.y);
+        return;
+      }
+
+      if (obstructionResize) {
+        map!.dragPan.enable();
+        setObstructionResize(null);
+        const roof = roofs.find((r) => r.id === obstructionResize.roofId);
+        const resolved = roof && resolveObstructionResize(obstructionResize, roof, currentLngLat);
+        if (resolved) onObstructionChange(obstructionResize.obstructionId, resolved.x, resolved.y, resolved.shape);
+        return;
+      }
+
+      if (obstructionDrag) {
+        map!.dragPan.enable();
+        setObstructionDrag(null);
+
+        // Barely moved (or didn't at all) — leave it as the plain click it
+        // basically is (e.g. re-selecting the same obstruction).
+        const dragDistance = e.point.dist(
+          new maplibregl.Point(obstructionDrag.startScreen.x, obstructionDrag.startScreen.y)
+        );
+        if (dragDistance < DRAG_MIN_PX) return;
+
+        const roof = roofs.find((r) => r.id === obstructionDrag.roofId);
+        const obstruction = obstructions.find((o) => o.id === obstructionDrag.obstructionId);
+        const moved = roof && obstruction && resolveObstructionMove(obstructionDrag, obstruction, roof, currentLngLat);
+        if (moved && obstruction) onObstructionChange(obstruction.id, moved.x, moved.y, obstruction.shape);
+        return;
+      }
+
       if (moduleDrag) {
         map!.dragPan.enable();
         setModuleDrag(null);
@@ -867,15 +1373,13 @@ export default function MapView({
         const dragDistance = e.point.dist(new maplibregl.Point(moduleDrag.startScreen.x, moduleDrag.startScreen.y));
         if (dragDistance < DRAG_MIN_PX) return;
 
-        const resolution = resolveDragTarget(moduleDrag, modules, moduleTypes, roofs, {
-          lng: e.lngLat.lng,
-          lat: e.lngLat.lat,
-        });
+        const resolution = resolveDragTarget(moduleDrag, modules, moduleTypes, roofs, currentLngLat);
         if (!resolution) return;
         const results = resolveGroupMove(
           modules,
           moduleTypes,
           roofs,
+          obstructions,
           moduleDrag.moduleIds,
           resolution.anchorLngLat,
           resolution.targetLngLat
@@ -940,6 +1444,15 @@ export default function MapView({
     boxSelect,
     moduleDrag,
     selectedModuleIds,
+    obstructions,
+    pendingObstructionShape,
+    onObstructionDrawn,
+    onObstructionClick,
+    onObstructionChange,
+    selectedObstructionId,
+    obstructionDraft,
+    obstructionDrag,
+    obstructionResize,
   ]);
 
   // Render the in-progress trace: the committed points/edges, plus (while
@@ -1086,7 +1599,15 @@ export default function MapView({
           <button onClick={onCancelPlacement}>Cancel</button>
         </div>
       )}
-      {!drawing && !pendingPlacement && placementError && (
+      {pendingObstructionShape && (
+        <div className="draw-toolbar">
+          <span>
+            {placementError ?? `Drag across a roof to draw the ${pendingObstructionShape}`}
+          </span>
+          <button onClick={onCancelObstructionDraw}>Cancel</button>
+        </div>
+      )}
+      {!drawing && !pendingPlacement && !pendingObstructionShape && placementError && (
         <div className="draw-toolbar">
           <span>{placementError}</span>
         </div>

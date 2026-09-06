@@ -6,6 +6,7 @@ import {
   updateProjectName,
   updateProjectRoofs,
   updateProjectModules,
+  updateProjectObstructions,
 } from "../features/projects/projectsSlice";
 import type { Project } from "../api/client";
 import { streetAddressFromPlaceName, type GeocodeResult } from "../api/geocoding";
@@ -17,10 +18,12 @@ import {
   fillRoofWithModules,
   type GroupMoveResult,
   type Module,
+  type Obstruction,
+  type ObstructionShape,
   type Roof,
 } from "sundraft-shared";
 import AddressSearch from "./AddressSearch";
-import MapView, { type PendingPlacement } from "./MapView";
+import MapView, { type PendingObstructionShape, type PendingPlacement } from "./MapView";
 import RoofList from "./RoofList";
 import { useHotkey } from "../hooks/useHotkey";
 
@@ -52,15 +55,22 @@ export default function OpenedProjectView({ project, onBack }: Props) {
   // placement mid-edit isn't possible either.
   const [isEditingRoof, setIsEditingRoof] = useState(false);
 
-  const busy = drawing || !!pendingPlacement || isEditingRoof;
+  const [obstructions, setObstructions] = useState<Obstruction[]>(project.obstructions);
+  const [pendingObstructionShape, setPendingObstructionShape] = useState<PendingObstructionShape | null>(null);
+  const [selectedObstructionId, setSelectedObstructionId] = useState<string | null>(null);
+
+  const busy = drawing || !!pendingPlacement || !!pendingObstructionShape || isEditingRoof;
 
   useHotkey("Escape", () => {
     setSelectedModuleIds([]);
     setSelectedRoofId(null);
+    setSelectedObstructionId(null);
     // "+ Add module" stays active across placements (see
     // handlePlacementResolved) so it needs its own way out besides the
-    // toolbar's Cancel button.
+    // toolbar's Cancel button. Obstruction drawing is one-shot (see
+    // handleObstructionDrawn) but Escape mid-drag should still back out.
     setPendingPlacement(null);
+    setPendingObstructionShape(null);
   });
 
   async function handleAddressSelect(result: GeocodeResult) {
@@ -122,6 +132,7 @@ export default function OpenedProjectView({ project, onBack }: Props) {
 
   function handleRoofClick(id: string) {
     setSelectedModuleIds([]);
+    setSelectedObstructionId(null);
     setSelectedRoofId((prev) => (prev === id ? null : id));
     setIsEditingRoof(false);
   }
@@ -141,7 +152,7 @@ export default function OpenedProjectView({ project, onBack }: Props) {
   function handleFillRoof(roofId: string) {
     const roof = roofs.find((r) => r.id === roofId);
     if (!roof) return;
-    const positions = fillRoofWithModules(roof, DEFAULT_MODULE_TYPE, "portrait", modules, MODULE_TYPES);
+    const positions = fillRoofWithModules(roof, DEFAULT_MODULE_TYPE, "portrait", modules, MODULE_TYPES, obstructions);
     const newModules: Module[] = positions.map((p) => ({
       id: crypto.randomUUID(),
       roofId,
@@ -158,6 +169,47 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     dispatch(updateProjectModules({ id: project.id, modules: next }));
   }
 
+  function persistObstructions(next: Obstruction[]) {
+    setObstructions(next);
+    dispatch(updateProjectObstructions({ id: project.id, obstructions: next }));
+  }
+
+  function handleAddObstruction(kind: PendingObstructionShape) {
+    setSelectedModuleIds([]);
+    setSelectedRoofId(null);
+    setSelectedObstructionId(null);
+    setPendingObstructionShape(kind);
+  }
+
+  // Drawing is one-shot (unlike "+ Add module," which stays open for a
+  // whole row/grid) — an obstruction almost always needs its size fine-
+  // tuned right after being drawn, so it lands selected (handles showing)
+  // instead of leaving draw mode active for a shape you're not done with.
+  function handleObstructionDrawn(roofId: string, shape: ObstructionShape, x: number, y: number) {
+    const newObstruction: Obstruction = { id: crypto.randomUUID(), roofId, x, y, shape };
+    persistObstructions([...obstructions, newObstruction]);
+    setPendingObstructionShape(null);
+    setSelectedObstructionId(newObstruction.id);
+  }
+
+  function handleObstructionClick(id: string | null) {
+    // Obstructions, modules, and a selected roof are alternate focuses —
+    // picking one clears the others, same reasoning as handleModuleClick.
+    setSelectedModuleIds([]);
+    setSelectedRoofId(null);
+    setSelectedObstructionId(id);
+  }
+
+  function handleObstructionChange(id: string, x: number, y: number, shape: ObstructionShape) {
+    persistObstructions(obstructions.map((o) => (o.id === id ? { ...o, x, y, shape } : o)));
+  }
+
+  function handleDeleteObstruction() {
+    if (!selectedObstructionId) return;
+    persistObstructions(obstructions.filter((o) => o.id !== selectedObstructionId));
+    setSelectedObstructionId(null);
+  }
+
   // arcTODO: Handle snapping. Handle module-to-roof collision (currently only
   // checks that the click point is inside the roof, not the module's full footprint).
   function handleAddModule() {
@@ -166,9 +218,11 @@ export default function OpenedProjectView({ project, onBack }: Props) {
   }
 
   function handleModuleClick(id: string | null, additive: boolean) {
-    // Modules and a selected roof are alternate focuses — picking one
-    // clears the other, so the two control panels never show at once.
+    // Modules, a selected roof, and a selected obstruction are alternate
+    // focuses — picking one clears the others, so only one control panel
+    // ever shows.
     setSelectedRoofId(null);
+    setSelectedObstructionId(null);
 
     if (!id) {
       setSelectedModuleIds([]);
@@ -213,6 +267,7 @@ export default function OpenedProjectView({ project, onBack }: Props) {
     // caught (including catching nothing), since it's a single deliberate
     // gesture rather than a series of individual picks to accumulate.
     setSelectedRoofId(null);
+    setSelectedObstructionId(null);
     setSelectedModuleIds(moduleIds);
   }
 
@@ -315,6 +370,13 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         onRectSelect={handleRectSelect}
         selectedRoofId={selectedRoofId}
         onRoofClick={handleRoofClick}
+        obstructions={obstructions}
+        pendingObstructionShape={pendingObstructionShape}
+        onObstructionDrawn={handleObstructionDrawn}
+        onCancelObstructionDraw={() => setPendingObstructionShape(null)}
+        selectedObstructionId={selectedObstructionId}
+        onObstructionClick={handleObstructionClick}
+        onObstructionChange={handleObstructionChange}
       />
 
       {!center && (
@@ -331,6 +393,12 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         <button onClick={handleAddModule} disabled={busy || roofs.length === 0}>
           + Add module
         </button>
+        <button onClick={() => handleAddObstruction("rectangle")} disabled={busy || roofs.length === 0}>
+          + Add obstruction (rectangle)
+        </button>
+        <button onClick={() => handleAddObstruction("circle")} disabled={busy || roofs.length === 0}>
+          + Add obstruction (circle)
+        </button>
       </div>
 
       {selectedModuleIds.length > 0 && (
@@ -346,11 +414,23 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         </div>
       )}
 
+      {selectedObstructionId && (
+        <div className="module-controls">
+          <span>
+            Obstruction selected{" "}
+            <span className="muted small">— drag a handle to resize, or its body to move it</span>
+          </span>
+          <button className="danger-button" onClick={handleDeleteObstruction}>
+            Delete
+          </button>
+        </div>
+      )}
+
       <RoofList
         roofs={roofs}
         modules={modules}
         moduleTypes={MODULE_TYPES}
-        disabled={drawing || !!pendingPlacement}
+        disabled={drawing || !!pendingPlacement || !!pendingObstructionShape}
         selectedRoofId={selectedRoofId}
         onSelectRoof={handleRoofClick}
         isEditingRoof={isEditingRoof}
