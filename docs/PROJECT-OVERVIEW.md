@@ -1,7 +1,7 @@
 # SunDraft — Project Overview
 
-**Status:** Milestones 1–4 complete (Foundation, Map + address search, Roof outline tool, Module placement). Next up: Milestone 5 (Persistence layer).
-**Last updated:** August 19, 2026
+**Status:** Milestones 1–4 complete — Foundation, Map + address search, Roof outline tool, and Module placement, the last of which grew well past its original scope (roof obstructions, roof selection UI, multi-module select/drag/snap, project list + routing). Milestone 5's backend (API Gateway → Lambda → DynamoDB) is also deployed and confirmed reachable from the live Amplify-hosted frontend, though full CRUD hasn't been independently re-verified against production beyond a GET check yet. Next up: Milestone 6 (real example templates + admin mode), then Milestone 7 (custom domain, budget alert, polish).
+**Last updated:** September 6, 2026
 
 ---
 
