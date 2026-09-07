@@ -86,6 +86,7 @@ export const handler = async (
         lng: body.lng ?? null,
         roofs: [],
         modules: [],
+        obstructions: [],
         createdAt: now,
         updatedAt: now,
       };
@@ -193,6 +194,7 @@ export const handler = async (
         lng: body.lng ?? null,
         roofs: body.roofs ?? [],
         modules: body.modules ?? [],
+        obstructions: body.obstructions ?? [],
         createdAt: now,
         updatedAt: now,
       };
