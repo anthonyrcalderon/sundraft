@@ -332,6 +332,11 @@ export default function OpenedProjectView({ project, onBack }: Props) {
       <button className="link" onClick={onBack}>
         ← Back to projects
       </button>
+      {project.isTemplate && (
+        <p className="admin-banner">
+          Editing this example directly (admin) — changes are visible to every visitor.
+        </p>
+      )}
       <input
         key={name}
         className="project-name-input"

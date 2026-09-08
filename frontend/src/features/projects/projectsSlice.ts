@@ -23,6 +23,13 @@ export const createBlankProject = createAsyncThunk(
   (name: string) => api.createProject({ name })
 );
 
+// Admin-only: creates a new template directly, bypassing the regular
+// create-then-fork path. Named with the "Example: " prefix up front so the
+// fork-on-open rename logic (which strips it) has something to strip later.
+export const createTemplate = createAsyncThunk("projects/createTemplate", () =>
+  api.createTemplate({ name: "Example: New example" })
+);
+
 // Opening a template always forks it — this is the one rule the whole demo
 // depends on, so it lives here rather than being left to call sites.
 export const openProject = createAsyncThunk(
@@ -95,6 +102,9 @@ const projectsSlice = createSlice({
         state.error = action.error.message ?? "Failed to load projects";
       })
       .addCase(createBlankProject.fulfilled, (state, action) => {
+        state.items.push(action.payload);
+      })
+      .addCase(createTemplate.fulfilled, (state, action) => {
         state.items.push(action.payload);
       })
       .addCase(openProject.fulfilled, (state, action) => {
