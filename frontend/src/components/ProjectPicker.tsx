@@ -41,10 +41,18 @@ export default function ProjectPicker({ onOpen }: Props) {
 
   return (
     <div className="app">
-      <h1>SunDraft</h1>
+      <div className="brand">
+        <img src="/favicon.svg" alt="" className="brand-icon" />
+        <h1>
+          <span className="brand-sun">Sun</span>
+          <span className="brand-draft">Draft</span>
+        </h1>
+      </div>
       <p className="muted">Pick an example, or start a new design from your own address.</p>
 
-      <button onClick={handleNewBlank}>+ New blank project</button>
+      <button className="primary-button" onClick={handleNewBlank}>
+        + New blank project
+      </button>
 
       {status === "loading" && (
         <p className="loading-row">
@@ -129,7 +137,9 @@ function ProjectListSection({
               </span>
             ) : (
               <span className="project-list-actions">
-                <button onClick={() => onOpen(p)}>{actionLabel}</button>
+                <button className="primary-button" onClick={() => onOpen(p)}>
+                  {actionLabel}
+                </button>
                 {onDelete && (
                   <button className="danger-button" onClick={() => setConfirmingDeleteId(p.id)}>
                     Delete

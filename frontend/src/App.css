@@ -1,3 +1,14 @@
+:root {
+  --color-bg: #fafafa;
+  --color-text: #1a1a1a;
+  --color-muted: #666;
+  --color-border: #ccc;
+  --color-accent: #f59e0b;
+  --color-accent-dark: #d97706;
+  --color-navy: #0f172a;
+  --color-danger: #b3261e;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5,8 +16,8 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #fafafa;
-  color: #1a1a1a;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .app {
@@ -17,6 +28,32 @@ body {
 
 h1 {
   margin-bottom: 0.25rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.25rem;
+}
+
+.brand-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.9rem;
+  letter-spacing: -0.02em;
+}
+
+.brand-sun {
+  color: var(--color-navy);
+}
+
+.brand-draft {
+  color: var(--color-accent);
 }
 
 .project-name-input {
@@ -55,53 +92,85 @@ h1 {
 }
 
 .error {
-  color: #b3261e;
+  color: var(--color-danger);
 }
 
 .link {
   background: none;
   border: none;
-  color: #1a1a1a;
+  color: var(--color-text);
   cursor: pointer;
   padding: 0;
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
 
+.link:hover {
+  text-decoration: underline;
+}
+
 button {
   padding: 0.5rem 1rem;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   background: white;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
 }
 
 button:hover {
   background: #f0f0f0;
 }
 
+button:active {
+  transform: translateY(1px);
+}
+
+.primary-button {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: white;
+  font-weight: 600;
+}
+
+.primary-button:hover {
+  background: var(--color-accent-dark);
+  border-color: var(--color-accent-dark);
+}
+
 .danger-button {
-  border-color: #b3261e;
-  color: #b3261e;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .danger-button:hover {
-  background: #b3261e;
+  background: var(--color-danger);
   color: white;
 }
 
 .project-list {
   list-style: none;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
 .project-list li {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #eee;
+  padding: 0.85rem 1rem;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.project-list li:hover {
+  border-color: #ddd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .project-list-actions,
@@ -109,6 +178,16 @@ button:hover {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+section {
+  margin-top: 2rem;
+}
+
+section h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.6rem;
+  color: var(--color-navy);
 }
 
 .app--wide {
@@ -261,7 +340,7 @@ button:hover {
   width: 1em;
   height: 1em;
   border: 2px solid #ddd;
-  border-top-color: #f59e0b;
+  border-top-color: var(--color-accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   vertical-align: -0.15em;
