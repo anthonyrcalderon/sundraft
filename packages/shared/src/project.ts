@@ -82,6 +82,10 @@ export interface Project {
   roofs: Roof[];
   modules: Module[];
   obstructions: Obstruction[];
+  // A small preview image shown on the project picker — currently only set
+  // by hand for example templates (a path under frontend/public, e.g.
+  // "/examples/1612-north-aspen-court.png"), never generated automatically.
+  screenshotUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
