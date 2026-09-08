@@ -158,9 +158,6 @@ button:active {
 }
 
 .project-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 0.85rem 1rem;
   background: white;
   border: 1px solid #eee;
@@ -173,11 +170,27 @@ button:active {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+.project-list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .project-list-actions,
 .project-list-confirm {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.project-thumb {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  border-radius: 6px;
+  margin-top: 0.75rem;
+  border: 1px solid #eee;
 }
 
 section {

@@ -1,0 +1,336 @@
+{
+  "roofs": [
+    {
+      "roofOutline": {
+        "coordinates": [
+          [
+            [
+              -87.73367327945884,
+              42.10982424337965
+            ],
+            [
+              -87.7336089064424,
+              42.10985359330513
+            ],
+            [
+              -87.73355526226227,
+              42.10982026372761
+            ],
+            [
+              -87.73352307575382,
+              42.109806334943386
+            ],
+            [
+              -87.73346033777867,
+              42.10981858306437
+            ],
+            [
+              -87.73340126811767,
+              42.109776073043975
+            ],
+            [
+              -87.73342346727023,
+              42.10975909627467
+            ],
+            [
+              -87.73360354202426,
+              42.109784944305375
+            ],
+            [
+              -87.73367327945884,
+              42.10982424337965
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "azimuth": 328,
+      "tilt": 20,
+      "id": "37d0ec99-6811-46ab-accb-1fb853aaf490"
+    }
+  ],
+  "isTemplate": true,
+  "sessionId": "TEMPLATE",
+  "lng": -87.7336193,
+  "updatedAt": "2026-09-07T07:16:38.504Z",
+  "createdAt": "2026-09-07T07:06:16.319Z",
+  "address": "The Home Alone House, 671, Lincoln Avenue, Winnetka, New Trier Township, Cook County, Illinois, 60093, United States",
+  "id": "5c935984-d5a1-4a45-82d7-4cbfa96ada23",
+  "modules": [
+    {
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "moduleTypeId": "standard-400w",
+      "id": "b2bf11f2-6e52-445a-9ba9-080b704772ef",
+      "y": -7.575332655622434,
+      "orientation": "portrait",
+      "x": 5.264989305402543
+    },
+    {
+      "id": "11d03234-43d1-4e1f-9e23-f3884d5b853f",
+      "moduleTypeId": "standard-400w",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "x": 6.314989305402543,
+      "orientation": "portrait",
+      "y": -7.575332655622434
+    },
+    {
+      "x": 3.1649893054025435,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "id": "0252fc6e-f95d-454d-b8c9-c3c2eb0ff483",
+      "moduleTypeId": "standard-400w",
+      "orientation": "portrait",
+      "y": -5.97785520028639
+    },
+    {
+      "x": 4.214989305402543,
+      "y": -5.97785520028639,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "orientation": "portrait",
+      "id": "34b0a228-6551-4b0f-bf7a-8283a9097edb",
+      "moduleTypeId": "standard-400w"
+    },
+    {
+      "orientation": "portrait",
+      "id": "b7b73aad-c3a6-4ac9-afbc-b2130c19c9a6",
+      "moduleTypeId": "standard-400w",
+      "y": -5.97785520028639,
+      "x": 5.264989305402543,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490"
+    },
+    {
+      "y": -5.97785520028639,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "orientation": "portrait",
+      "x": 6.314989305402543,
+      "moduleTypeId": "standard-400w",
+      "id": "d3099964-716e-4f52-8738-f3c6a940be24"
+    },
+    {
+      "orientation": "portrait",
+      "moduleTypeId": "standard-400w",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "x": 2.1149893054025437,
+      "id": "76e5a540-d174-4746-858a-d9038a744d75",
+      "y": -4.380377744950346
+    },
+    {
+      "id": "440264f0-0ced-4315-93bf-f94001b2c088",
+      "x": 3.1649893054025435,
+      "y": -4.380377744950346,
+      "orientation": "portrait",
+      "moduleTypeId": "standard-400w",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490"
+    },
+    {
+      "orientation": "portrait",
+      "x": 4.214989305402543,
+      "id": "f28d17aa-46ff-4805-ad04-e5d35d5d0a6d",
+      "moduleTypeId": "standard-400w",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "y": -4.380377744950346
+    },
+    {
+      "orientation": "portrait",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "moduleTypeId": "standard-400w",
+      "x": 5.264989305402543,
+      "y": -4.380377744950346,
+      "id": "5c99ef20-e50d-4c49-9868-516a4688c744"
+    },
+    {
+      "moduleTypeId": "standard-400w",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "id": "11573282-ecf2-4698-bf6b-c0e2f1d20518",
+      "y": -4.380377744950346,
+      "x": 6.314989305402543,
+      "orientation": "portrait"
+    },
+    {
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "y": -2.782900289614302,
+      "x": 0.014989305402543618,
+      "orientation": "portrait",
+      "id": "01f91dd1-3916-4313-adf0-0344e6abf0c7",
+      "moduleTypeId": "standard-400w"
+    },
+    {
+      "orientation": "portrait",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "y": -2.782900289614302,
+      "moduleTypeId": "standard-400w",
+      "x": 1.0649893054025437,
+      "id": "80a8d7f7-f633-418f-8d67-58a6a2daa305"
+    },
+    {
+      "moduleTypeId": "standard-400w",
+      "x": 2.1149893054025437,
+      "y": -2.782900289614302,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "orientation": "portrait",
+      "id": "d22863a6-a191-4ef7-90b7-137df81854da"
+    },
+    {
+      "y": -2.782900289614302,
+      "orientation": "portrait",
+      "x": 3.1649893054025435,
+      "moduleTypeId": "standard-400w",
+      "id": "901c4cdb-7926-4cda-888d-0d90a26e4721",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490"
+    },
+    {
+      "orientation": "portrait",
+      "id": "6154af36-c3c5-4653-aede-550dfd6f602f",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "x": -2.0850106945974565,
+      "y": -1.1854228342782578,
+      "moduleTypeId": "standard-400w"
+    },
+    {
+      "id": "c93d41f8-54a7-4f24-8477-4bea55ce9997",
+      "orientation": "portrait",
+      "x": -1.0350106945974564,
+      "y": -1.1854228342782578,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "moduleTypeId": "standard-400w"
+    },
+    {
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "x": 0.014989305402543618,
+      "moduleTypeId": "standard-400w",
+      "id": "30bc6103-f1ad-43b4-b4a8-abc9d2a0bbe6",
+      "y": -1.1854228342782578,
+      "orientation": "portrait"
+    },
+    {
+      "moduleTypeId": "standard-400w",
+      "orientation": "portrait",
+      "y": 0.41205462105778645,
+      "id": "18ab1f68-b166-41ee-ae70-0d78c1fc22cd",
+      "x": -3.1350106945974563,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490"
+    },
+    {
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "y": 0.41205462105778645,
+      "moduleTypeId": "standard-400w",
+      "x": -2.0850106945974565,
+      "orientation": "portrait",
+      "id": "c299cfd7-6fd9-428f-9c99-dad851bda8ff"
+    },
+    {
+      "id": "3ed32113-9ff9-4afd-8874-42c6a753a09d",
+      "x": -1.0350106945974564,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "moduleTypeId": "standard-400w",
+      "orientation": "portrait",
+      "y": 0.41205462105778645
+    },
+    {
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "y": 2.009532076393831,
+      "moduleTypeId": "standard-400w",
+      "id": "4233140d-811c-4118-9ac2-e7d3c6850618",
+      "x": -4.185010694597456,
+      "orientation": "portrait"
+    },
+    {
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "y": 2.009532076393831,
+      "x": -3.1350106945974563,
+      "id": "31c718c4-866d-4e38-9d63-fa8ab801ae05",
+      "orientation": "portrait",
+      "moduleTypeId": "standard-400w"
+    },
+    {
+      "x": -2.0850106945974565,
+      "orientation": "portrait",
+      "id": "a8f612b3-3599-4164-98b0-12c8fd6da6a4",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "y": 2.009532076393831,
+      "moduleTypeId": "standard-400w"
+    },
+    {
+      "y": 2.009532076393831,
+      "moduleTypeId": "standard-400w",
+      "orientation": "portrait",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "id": "c0abef02-dc72-46f7-be1c-433a50208f0c",
+      "x": -1.0350106945974564
+    },
+    {
+      "moduleTypeId": "standard-400w",
+      "id": "0cbed3a2-37b8-4cfc-a834-9164cbcfb0ca",
+      "y": 3.607009531729875,
+      "orientation": "portrait",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "x": -5.235010694597456
+    },
+    {
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "moduleTypeId": "standard-400w",
+      "id": "f2a14720-6aa8-41ab-80d9-298ba948cbbe",
+      "y": 3.607009531729875,
+      "x": -4.185010694597456,
+      "orientation": "portrait"
+    },
+    {
+      "orientation": "portrait",
+      "x": -3.1350106945974563,
+      "y": 3.607009531729875,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "id": "f766c42f-2a2c-4c41-82fb-626d32e432f2",
+      "moduleTypeId": "standard-400w"
+    },
+    {
+      "y": 3.607009531729875,
+      "orientation": "portrait",
+      "id": "9cb7761d-0f9c-4576-bbe7-e99b0fa311b7",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "moduleTypeId": "standard-400w",
+      "x": -2.0850106945974565
+    },
+    {
+      "moduleTypeId": "standard-400w",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "orientation": "portrait",
+      "x": -6.285010694597456,
+      "id": "c0a09cc8-e4a2-4409-b1a2-edc858730cdd",
+      "y": 5.204486987065919
+    },
+    {
+      "moduleTypeId": "standard-400w",
+      "y": 5.204486987065919,
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "x": -5.235010694597456,
+      "orientation": "portrait",
+      "id": "2da619fe-a525-4afc-a7b8-1aa0d31f36a6"
+    },
+    {
+      "moduleTypeId": "standard-400w",
+      "id": "1a1d6735-ef2d-4881-b2b5-e62196d13cc8",
+      "y": 5.204486987065919,
+      "orientation": "portrait",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "x": -4.185010694597456
+    },
+    {
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "orientation": "portrait",
+      "moduleTypeId": "standard-400w",
+      "id": "c79b20fe-ca77-4349-bff8-c88ae0fefdfb",
+      "y": 5.204486987065919,
+      "x": -3.1350106945974563
+    },
+    {
+      "id": "04ac4f73-57a2-4ff4-bd1c-92da7acdaff0",
+      "roofId": "37d0ec99-6811-46ab-accb-1fb853aaf490",
+      "y": 5.204486987065919,
+      "x": -2.0850106945974565,
+      "orientation": "portrait",
+      "moduleTypeId": "standard-400w"
+    }
+  ],
+  "lat": 42.1097985,
+  "name": "Example: The Home Alone House (as created by AI)",
+  "obstructions": []
+}

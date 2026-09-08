@@ -41,12 +41,12 @@ app.use(express.json({ limit: "2mb" }));
 
 function readDb(): Db {
   const db: Db = JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
-  // db.json is hand-editable local state that predates the Obstruction
-  // field — backfill it here instead of forcing everyone to reset their
-  // local db (or add an obstructions: [] default everywhere a Project is
-  // read).
+  // db.json is hand-editable local state that predates the Obstruction and
+  // screenshotUrl fields — backfill them here instead of forcing everyone
+  // to reset their local db (or add defaults everywhere a Project is read).
   for (const project of db.projects) {
     project.obstructions ??= [];
+    project.screenshotUrl ??= null;
   }
   return db;
 }
@@ -107,6 +107,7 @@ app.post("/api/projects", (req: Request, res: Response) => {
     roofs: [],
     modules: [],
     obstructions: [],
+    screenshotUrl: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -214,6 +215,7 @@ app.post("/api/templates", (req: Request, res: Response) => {
     roofs: req.body.roofs ?? [],
     modules: req.body.modules ?? [],
     obstructions: req.body.obstructions ?? [],
+    screenshotUrl: req.body.screenshotUrl ?? null,
     createdAt: now,
     updatedAt: now,
   };

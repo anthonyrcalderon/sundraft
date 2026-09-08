@@ -120,32 +120,37 @@ function ProjectListSection({
       <ul className="project-list">
         {projects.map((p) => (
           <li key={p.id}>
-            <span>{p.name}</span>
-            {onDelete && confirmingDeleteId === p.id ? (
-              <span className="project-list-confirm">
-                <span className="muted small">Delete this project?</span>
-                <button
-                  className="danger-button"
-                  onClick={() => {
-                    onDelete(p.id);
-                    setConfirmingDeleteId(null);
-                  }}
-                >
-                  Yes
-                </button>
-                <button onClick={() => setConfirmingDeleteId(null)}>Cancel</button>
-              </span>
-            ) : (
-              <span className="project-list-actions">
-                <button className="primary-button" onClick={() => onOpen(p)}>
-                  {actionLabel}
-                </button>
-                {onDelete && (
-                  <button className="danger-button" onClick={() => setConfirmingDeleteId(p.id)}>
-                    Delete
+            <div className="project-list-row">
+              <span>{p.name}</span>
+              {onDelete && confirmingDeleteId === p.id ? (
+                <span className="project-list-confirm">
+                  <span className="muted small">Delete this project?</span>
+                  <button
+                    className="danger-button"
+                    onClick={() => {
+                      onDelete(p.id);
+                      setConfirmingDeleteId(null);
+                    }}
+                  >
+                    Yes
                   </button>
-                )}
-              </span>
+                  <button onClick={() => setConfirmingDeleteId(null)}>Cancel</button>
+                </span>
+              ) : (
+                <span className="project-list-actions">
+                  <button className="primary-button" onClick={() => onOpen(p)}>
+                    {actionLabel}
+                  </button>
+                  {onDelete && (
+                    <button className="danger-button" onClick={() => setConfirmingDeleteId(p.id)}>
+                      Delete
+                    </button>
+                  )}
+                </span>
+              )}
+            </div>
+            {p.screenshotUrl && (
+              <img className="project-thumb" src={p.screenshotUrl} alt={`Preview of ${p.name}`} />
             )}
           </li>
         ))}

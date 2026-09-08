@@ -87,6 +87,7 @@ export const handler = async (
         roofs: [],
         modules: [],
         obstructions: [],
+        screenshotUrl: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -195,6 +196,7 @@ export const handler = async (
         roofs: body.roofs ?? [],
         modules: body.modules ?? [],
         obstructions: body.obstructions ?? [],
+        screenshotUrl: body.screenshotUrl ?? null,
         createdAt: now,
         updatedAt: now,
       };
