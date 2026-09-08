@@ -56,7 +56,13 @@ function App() {
     setOpenedProject(null);
   }
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="app app--centered">
+        <span className="spinner spinner--large" />
+      </div>
+    );
+  }
 
   if (openedProject) {
     return <OpenedProjectView project={openedProject} onBack={handleBack} />;

@@ -18,6 +18,9 @@ mock-server/db.json
 # Vite
 .vite/
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
 # CDK
 infra/cdk.out/
 

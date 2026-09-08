@@ -46,10 +46,16 @@ export default function ProjectPicker({ onOpen }: Props) {
 
       <button onClick={handleNewBlank}>+ New blank project</button>
 
-      {status === "loading" && <p>Loading…</p>}
+      {status === "loading" && (
+        <p className="loading-row">
+          <span className="spinner" /> Loading…
+        </p>
+      )}
       {status === "failed" && (
         <p className="error">
-          {error} — is the mock server running? (`cd mock-server && npm start`)
+          {import.meta.env.DEV
+            ? `${error} — is the mock server running? (\`cd mock-server && npm start\`)`
+            : "Couldn't load your projects. Try refreshing the page."}
         </p>
       )}
 
@@ -60,6 +66,11 @@ export default function ProjectPicker({ onOpen }: Props) {
         actionLabel="Open"
         onOpen={handleOpen}
         onDelete={handleDelete}
+        emptyMessage={
+          status === "succeeded"
+            ? "You haven't started a design yet — clone an example above, or start a new blank project."
+            : undefined
+        }
       />
     </div>
   );
@@ -71,19 +82,29 @@ function ProjectListSection({
   actionLabel,
   onOpen,
   onDelete,
+  emptyMessage,
 }: {
   title: string;
   projects: Project[];
   actionLabel: string;
   onOpen: (project: Project) => void;
   onDelete?: (id: string) => void;
+  emptyMessage?: string;
 }) {
   // Deleting a project throws away every roof and module in it with no way
   // back, same stakes as deleting a roof — so it gets the same "are you
   // sure?" confirm step instead of acting immediately.
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
-  if (projects.length === 0) return null;
+  if (projects.length === 0) {
+    if (!emptyMessage) return null;
+    return (
+      <section>
+        <h2>{title}</h2>
+        <p className="muted small empty-state">{emptyMessage}</p>
+      </section>
+    );
+  }
 
   return (
     <section>

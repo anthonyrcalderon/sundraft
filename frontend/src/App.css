@@ -255,3 +255,47 @@ button:hover {
   border: 1px solid #ccc;
   font-size: 0.9rem;
 }
+
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid #ddd;
+  border-top-color: #f59e0b;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: -0.15em;
+}
+
+.spinner--large {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-width: 3px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #666;
+}
+
+.app--centered {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  margin: 0.5rem 0 0;
+}
