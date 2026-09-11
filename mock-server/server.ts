@@ -134,6 +134,10 @@ app.post("/api/projects/:id/fork", (req: Request, res: Response) => {
     sessionId,
     isTemplate: false,
     name: source.name.replace(/^Example:\s*/, ""),
+    // The screenshot represents the template's fixed, read-only state — a
+    // fork immediately diverges from it as soon as it's edited, so carrying
+    // the image over would misrepresent this copy's actual design.
+    screenshotUrl: null,
     createdAt: now,
     updatedAt: now,
   };

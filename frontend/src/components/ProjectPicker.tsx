@@ -149,7 +149,7 @@ function ProjectListSection({
                 </span>
               )}
             </div>
-            {p.screenshotUrl && (
+            {p.isTemplate && p.screenshotUrl && (
               <img className="project-thumb" src={p.screenshotUrl} alt={`Preview of ${p.name}`} />
             )}
           </li>

@@ -173,6 +173,10 @@ export const handler = async (
         sessionId,
         isTemplate: false,
         name: (source.Item.name as string).replace(/^Example:\s*/, ""),
+        // The screenshot represents the template's fixed, read-only state — a
+        // fork immediately diverges from it as soon as it's edited, so carrying
+        // the image over would misrepresent this copy's actual design.
+        screenshotUrl: null,
         createdAt: now,
         updatedAt: now,
       };
