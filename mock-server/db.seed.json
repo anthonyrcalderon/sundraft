@@ -4,16 +4,699 @@
       "id": "template-1",
       "sessionId": null,
       "isTemplate": true,
+      "name": "Home Alone House",
+      "address": "The Home Alone House, 671, Lincoln Avenue, Winnetka, New Trier Township, Cook County, Illinois, 60093, United States",
+      "lat": 42.1097985,
+      "lng": -87.7336193,
+      "roofs": [
+        {
+          "id": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "roofOutline": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -87.73369357076474,
+                  42.10979753760134
+                ],
+                [
+                  -87.7335802698417,
+                  42.109706203749994
+                ],
+                [
+                  -87.73366108726694,
+                  42.10970869246435
+                ],
+                [
+                  -87.7336969254496,
+                  42.10973758226203
+                ],
+                [
+                  -87.73369357076474,
+                  42.10979753760134
+                ]
+              ]
+            ]
+          },
+          "azimuth": 47,
+          "tilt": 20
+        },
+        {
+          "id": "0c1f5ddf-f5e1-4fed-aa33-bd4787832c5a",
+          "tilt": 20,
+          "roofOutline": {
+            "coordinates": [
+              [
+                [
+                  -87.73377774287528,
+                  42.10974007097579
+                ],
+                [
+                  -87.73366444195247,
+                  42.109648737041226
+                ],
+                [
+                  -87.73366171037921,
+                  42.10969755611981
+                ],
+                [
+                  -87.73366629614212,
+                  42.109697697333814
+                ],
+                [
+                  -87.73366699207357,
+                  42.10968525957176
+                ],
+                [
+                  -87.73367822865545,
+                  42.10967758803673
+                ],
+                [
+                  -87.73369429831723,
+                  42.10969054208627
+                ],
+                [
+                  -87.73368306173712,
+                  42.10969821361965
+                ],
+                [
+                  -87.73366171037921,
+                  42.10969755611981
+                ],
+                [
+                  -87.73366108726694,
+                  42.10970869246435
+                ],
+                [
+                  -87.7336969254496,
+                  42.10973758226203
+                ],
+                [
+                  -87.73371193678634,
+                  42.10973804452655
+                ],
+                [
+                  -87.73371282306789,
+                  42.10972220476833
+                ],
+                [
+                  -87.73372405964659,
+                  42.10971453323839
+                ],
+                [
+                  -87.73374012930948,
+                  42.10972748728028
+                ],
+                [
+                  -87.73372889273007,
+                  42.10973515880764
+                ],
+                [
+                  -87.73371212713832,
+                  42.10973464252436
+                ],
+                [
+                  -87.73371193678634,
+                  42.10973804452655
+                ],
+                [
+                  -87.73377774287528,
+                  42.10974007097579
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "azimuth": 227
+        },
+        {
+          "tilt": 20,
+          "roofOutline": {
+            "coordinates": [
+              [
+                [
+                  -87.73366444195247,
+                  42.109648737041226
+                ],
+                [
+                  -87.73365002865822,
+                  42.1096585774128
+                ],
+                [
+                  -87.7336478228604,
+                  42.10969799978511
+                ],
+                [
+                  -87.7335946831382,
+                  42.10969636338518
+                ],
+                [
+                  -87.7335802698417,
+                  42.109706203749994
+                ],
+                [
+                  -87.73366108726694,
+                  42.10970869246435
+                ],
+                [
+                  -87.73366444195247,
+                  42.109648737041226
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "id": "efc73a88-ffca-406a-88bb-79556ffc31ce",
+          "azimuth": 137
+        },
+        {
+          "azimuth": 317,
+          "tilt": 20,
+          "id": "f493e548-84ba-41b9-9481-aecbc5070898",
+          "roofOutline": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -87.73377774287528,
+                  42.10974007097579
+                ],
+                [
+                  -87.73376332958503,
+                  42.109749911331704
+                ],
+                [
+                  -87.73371018985733,
+                  42.10974827493246
+                ],
+                [
+                  -87.73370798405655,
+                  42.10978769725298
+                ],
+                [
+                  -87.73369357076474,
+                  42.10979753760134
+                ],
+                [
+                  -87.7336969254496,
+                  42.10973758226203
+                ],
+                [
+                  -87.73377774287528,
+                  42.10974007097579
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tilt": 20,
+          "id": "02d9ef8c-f67e-4b83-8577-32dff457db9e",
+          "roofOutline": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -87.73361945528723,
+                  42.109633931645874
+                ],
+                [
+                  -87.73356410976686,
+                  42.1096717176371
+                ],
+                [
+                  -87.7336172494904,
+                  42.109673354034356
+                ],
+                [
+                  -87.73361945528723,
+                  42.109633931645874
+                ]
+              ]
+            ]
+          },
+          "azimuth": 137
+        },
+        {
+          "id": "8e522297-85d7-46b4-8d84-aad2a874411a",
+          "azimuth": 227,
+          "roofOutline": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -87.73361945528723,
+                  42.109633931645874
+                ],
+                [
+                  -87.73365002865822,
+                  42.1096585774128
+                ],
+                [
+                  -87.7336478228604,
+                  42.10969799978511
+                ],
+                [
+                  -87.7336172494904,
+                  42.109673354034356
+                ],
+                [
+                  -87.73361945528723,
+                  42.109633931645874
+                ]
+              ]
+            ]
+          },
+          "tilt": 20
+        },
+        {
+          "id": "774a0857-c39f-437d-b160-293539eb53c1",
+          "azimuth": 47,
+          "tilt": 20,
+          "roofOutline": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -87.73356410976686,
+                  42.1096717176371
+                ],
+                [
+                  -87.7335946831382,
+                  42.10969636338518
+                ],
+                [
+                  -87.7336478228604,
+                  42.10969799978511
+                ],
+                [
+                  -87.7336172494904,
+                  42.109673354034356
+                ],
+                [
+                  -87.73356410976686,
+                  42.1096717176371
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "roofOutline": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -87.73379390295469,
+                  42.1097745570556
+                ],
+                [
+                  -87.73373855742624,
+                  42.10981234296219
+                ],
+                [
+                  -87.73374076322658,
+                  42.10977292065698
+                ],
+                [
+                  -87.73379390295469,
+                  42.1097745570556
+                ]
+              ]
+            ]
+          },
+          "id": "392fb2d0-6382-4a87-af7f-fb5ff3df3109",
+          "azimuth": 317,
+          "tilt": 20
+        },
+        {
+          "id": "cfcb31b0-1b66-492a-881f-5763f489e211",
+          "roofOutline": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -87.73379390295469,
+                  42.1097745570556
+                ],
+                [
+                  -87.73376332958503,
+                  42.109749911331704
+                ],
+                [
+                  -87.73371018985733,
+                  42.10974827493246
+                ],
+                [
+                  -87.73374076322658,
+                  42.10977292065698
+                ],
+                [
+                  -87.73379390295469,
+                  42.1097745570556
+                ]
+              ]
+            ]
+          },
+          "tilt": 20,
+          "azimuth": 227
+        },
+        {
+          "azimuth": 47,
+          "id": "ed6f50e5-c0e2-4bc8-acaa-22324e5161da",
+          "tilt": 20,
+          "roofOutline": {
+            "coordinates": [
+              [
+                [
+                  -87.73373855742624,
+                  42.10981234296219
+                ],
+                [
+                  -87.73370798405655,
+                  42.10978769725298
+                ],
+                [
+                  -87.73371018985733,
+                  42.10974827493246
+                ],
+                [
+                  -87.73374076322658,
+                  42.10977292065698
+                ],
+                [
+                  -87.73373855742624,
+                  42.10981234296219
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          }
+        },
+        {
+          "azimuth": 137,
+          "tilt": 20,
+          "roofOutline": {
+            "coordinates": [
+              [
+                [
+                  -87.73367822865545,
+                  42.10967758803673
+                ],
+                [
+                  -87.73366699207357,
+                  42.10968525957176
+                ],
+                [
+                  -87.73366629614212,
+                  42.109697697333814
+                ],
+                [
+                  -87.73368626348558,
+                  42.10968406506166
+                ],
+                [
+                  -87.73367822865545,
+                  42.10967758803673
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "id": "fd39ec3e-fb5b-4475-8d02-11be9e6c7a61"
+        },
+        {
+          "id": "e863f054-0e31-47a0-b760-bb4d2c92634e",
+          "tilt": 20,
+          "roofOutline": {
+            "coordinates": [
+              [
+                [
+                  -87.73369429831723,
+                  42.10969054208627
+                ],
+                [
+                  -87.73368306173712,
+                  42.10969821361965
+                ],
+                [
+                  -87.73366629614212,
+                  42.109697697333814
+                ],
+                [
+                  -87.73368626348558,
+                  42.10968406506166
+                ],
+                [
+                  -87.73369429831723,
+                  42.10969054208627
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "azimuth": 317
+        },
+        {
+          "roofOutline": {
+            "coordinates": [
+              [
+                [
+                  -87.73372405964659,
+                  42.10971453323839
+                ],
+                [
+                  -87.73371282306789,
+                  42.10972220476833
+                ],
+                [
+                  -87.73371212713832,
+                  42.10973464252436
+                ],
+                [
+                  -87.73373209447806,
+                  42.10972101025939
+                ],
+                [
+                  -87.73372405964659,
+                  42.10971453323839
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "id": "09975851-9369-4008-8b2c-c673b087432d",
+          "azimuth": 137,
+          "tilt": 20
+        },
+        {
+          "id": "302c1b7d-61e0-43fa-84f6-5174d3c599a7",
+          "roofOutline": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -87.73374012930948,
+                  42.10972748728028
+                ],
+                [
+                  -87.73372889273007,
+                  42.10973515880764
+                ],
+                [
+                  -87.73371212713832,
+                  42.10973464252436
+                ],
+                [
+                  -87.73373209447806,
+                  42.10972101025939
+                ],
+                [
+                  -87.73374012930948,
+                  42.10972748728028
+                ]
+              ]
+            ]
+          },
+          "azimuth": 317,
+          "tilt": 20
+        }
+      ],
+      "modules": [
+        {
+          "orientation": "portrait",
+          "roofId": "0c1f5ddf-f5e1-4fed-aa33-bd4787832c5a",
+          "x": -1.416117527622343,
+          "moduleTypeId": "standard-400w",
+          "y": 1.3301937565245123,
+          "id": "bc8215b5-f561-4879-93ee-d86133f33cf9"
+        },
+        {
+          "id": "598003bc-d82b-4077-b92f-5e409b0a6494",
+          "orientation": "portrait",
+          "roofId": "0c1f5ddf-f5e1-4fed-aa33-bd4787832c5a",
+          "x": -0.36611752761320265,
+          "y": 1.3301937563163237,
+          "moduleTypeId": "standard-400w"
+        },
+        {
+          "orientation": "portrait",
+          "y": 1.3301937561081352,
+          "moduleTypeId": "standard-400w",
+          "id": "18975a43-78e5-4baf-ac2c-666e31b72bd4",
+          "roofId": "0c1f5ddf-f5e1-4fed-aa33-bd4787832c5a",
+          "x": 0.6838824723959378
+        },
+        {
+          "id": "deb9ef5a-0cd0-4293-883a-a23c8a7c898c",
+          "moduleTypeId": "standard-400w",
+          "y": -0.2672836988115319,
+          "x": -1.416117527622343,
+          "orientation": "portrait",
+          "roofId": "0c1f5ddf-f5e1-4fed-aa33-bd4787832c5a"
+        },
+        {
+          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "roofId": "0c1f5ddf-f5e1-4fed-aa33-bd4787832c5a",
+          "x": -0.36611752762234295,
+          "y": -0.2672836988115319,
+          "id": "c0143305-0085-4f1b-81ed-1a64219161b5"
+        },
+        {
+          "orientation": "portrait",
+          "y": -0.26728369922790907,
+          "x": 0.6838824723959378,
+          "id": "5b1bb7b2-ef16-439f-aedb-a214d2bdec07",
+          "moduleTypeId": "standard-400w",
+          "roofId": "0c1f5ddf-f5e1-4fed-aa33-bd4787832c5a"
+        },
+        {
+          "id": "02e25a57-381b-45da-9850-7f762d84358f",
+          "orientation": "portrait",
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "moduleTypeId": "standard-400w",
+          "x": 0.6665198568901788,
+          "y": -0.6881978313855073
+        },
+        {
+          "x": 0.6665198566220805,
+          "y": 0.9092796239803927,
+          "id": "e7861baa-18d4-450c-beba-62d6b1e859d4",
+          "orientation": "portrait",
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "moduleTypeId": "standard-400w"
+        },
+        {
+          "orientation": "portrait",
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "moduleTypeId": "standard-400w",
+          "y": 0.9092796235800429,
+          "x": 1.7165198564520268,
+          "id": "77d0af39-c8c8-4fa7-ba9b-33fb6e35213e"
+        },
+        {
+          "moduleTypeId": "standard-400w",
+          "y": 0.9092796231796929,
+          "x": 2.766519856281973,
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "id": "350f31a3-fa4d-47d8-9384-3e09f128ce81",
+          "orientation": "portrait"
+        },
+        {
+          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "x": 3.81651985611192,
+          "id": "1a88bc78-b27f-4637-b331-0ed33119bbb9",
+          "y": 0.9092796227793429,
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb"
+        },
+        {
+          "id": "58ea6c7a-7053-46c4-8636-dd938609ec02",
+          "orientation": "portrait",
+          "x": 4.8665198567422525,
+          "y": 0.9092796232373024,
+          "moduleTypeId": "standard-400w",
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb"
+        },
+        {
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "moduleTypeId": "standard-400w",
+          "x": 5.916519856572199,
+          "y": 0.9092796228369524,
+          "id": "23417f81-9ed4-4795-bc00-eba04bbaddac",
+          "orientation": "portrait"
+        },
+        {
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "id": "786c6d6f-5e5d-4d0f-a5fe-0cda013b50d1",
+          "x": -0.38348014293976757,
+          "y": -0.6881978309851573,
+          "orientation": "portrait",
+          "moduleTypeId": "standard-400w"
+        },
+        {
+          "x": -1.4334801435701006,
+          "orientation": "portrait",
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "y": -0.6881978314431167,
+          "id": "410a119f-6d0d-4295-8135-a6af82cb035b",
+          "moduleTypeId": "standard-400w"
+        },
+        {
+          "y": -0.6881978317858573,
+          "moduleTypeId": "standard-400w",
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "id": "c7493c26-b9d1-47a6-ae46-4182d2e905e3",
+          "orientation": "portrait",
+          "x": 1.7165198567201254
+        },
+        {
+          "id": "834c8b9d-5db3-4224-a04c-b3e60db939c4",
+          "y": -0.6881978321862072,
+          "orientation": "portrait",
+          "moduleTypeId": "standard-400w",
+          "x": 2.7665198565500715,
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb"
+        },
+        {
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "moduleTypeId": "standard-400w",
+          "id": "70f7aac3-0fcd-4ae8-9344-3a3b2e4dd4a9",
+          "x": 3.8165198566019214,
+          "y": -0.6881978311888035,
+          "orientation": "portrait"
+        }
+      ],
+      "obstructions": [
+        {
+          "y": 1.319186336129519,
+          "roofId": "19cbd7b9-a3a4-45b0-a7be-5b0563bd4fdb",
+          "id": "78b67a78-8463-43f5-a90a-175c0e019874",
+          "shape": {
+            "width": 2.9629356058337004,
+            "kind": "rectangle",
+            "height": 1.5383657168008575
+          },
+          "x": -2.0351265748956613
+        }
+      ],
+      "screenshotUrl": "/examples/home-alone-house.png",
+      "createdAt": "2026-09-11T20:19:42.459Z",
+      "updatedAt": "2026-09-11T20:19:42.459Z"
+    },
+    {
+      "id": "template-2",
+      "sessionId": null,
+      "isTemplate": true,
       "name": "Example: 1612 North Aspen Court",
       "address": "1612, North Aspen Court, The Lakes, Visalia, Tulare County, California, 93291, United States",
       "lat": 36.3441335,
       "lng": -119.3529785,
-      "screenshotUrl": "/examples/1612-north-aspen-court.png",
       "roofs": [
         {
-          "azimuth": 4,
-          "tilt": 45,
           "roofOutline": {
+            "type": "Polygon",
             "coordinates": [
               [
                 [
@@ -37,14 +720,17 @@
                   36.34396964871931
                 ]
               ]
-            ],
-            "type": "Polygon"
+            ]
           },
-          "id": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
+          "id": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "tilt": 45,
+          "azimuth": 4
         },
         {
+          "tilt": 20,
           "id": "a900d6b9-6723-4d3f-a517-e9d22c209938",
           "roofOutline": {
+            "type": "Polygon",
             "coordinates": [
               [
                 [
@@ -68,17 +754,16 @@
                   36.34396964871931
                 ]
               ]
-            ],
-            "type": "Polygon"
+            ]
           },
-          "tilt": 20,
           "azimuth": 184
         },
         {
-          "tilt": 20,
-          "id": "0aa63859-f1d7-4745-ac00-85f8e38fc892",
           "azimuth": 274,
+          "id": "0aa63859-f1d7-4745-ac00-85f8e38fc892",
+          "tilt": 20,
           "roofOutline": {
+            "type": "Polygon",
             "coordinates": [
               [
                 [
@@ -142,15 +827,14 @@
                   36.34396090110624
                 ]
               ]
-            ],
-            "type": "Polygon"
+            ]
           }
         },
         {
           "tilt": 20,
           "id": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "azimuth": 274,
           "roofOutline": {
+            "type": "Polygon",
             "coordinates": [
               [
                 [
@@ -174,12 +858,15 @@
                   36.344115787988144
                 ]
               ]
-            ],
-            "type": "Polygon"
-          }
+            ]
+          },
+          "azimuth": 274
         },
         {
+          "id": "c4e09268-fc2a-416f-b461-f0ca0007b355",
+          "azimuth": 184,
           "roofOutline": {
+            "type": "Polygon",
             "coordinates": [
               [
                 [
@@ -203,17 +890,15 @@
                   36.34400582882435
                 ]
               ]
-            ],
-            "type": "Polygon"
+            ]
           },
-          "azimuth": 184,
-          "tilt": 20,
-          "id": "c4e09268-fc2a-416f-b461-f0ca0007b355"
+          "tilt": 20
         },
         {
+          "azimuth": 4,
           "id": "5dc7e3d5-3be2-45be-8245-a92147f6af9f",
+          "tilt": 20,
           "roofOutline": {
-            "type": "Polygon",
             "coordinates": [
               [
                 [
@@ -237,14 +922,12 @@
                   36.34404503607634
                 ]
               ]
-            ]
-          },
-          "azimuth": 4,
-          "tilt": 20
+            ],
+            "type": "Polygon"
+          }
         },
         {
           "tilt": 20,
-          "id": "4ddec847-c343-44ba-b82e-1b317aef7089",
           "roofOutline": {
             "type": "Polygon",
             "coordinates": [
@@ -272,11 +955,11 @@
               ]
             ]
           },
-          "azimuth": 184
+          "azimuth": 184,
+          "id": "4ddec847-c343-44ba-b82e-1b317aef7089"
         },
         {
           "tilt": 20,
-          "azimuth": 4,
           "roofOutline": {
             "coordinates": [
               [
@@ -304,743 +987,745 @@
             ],
             "type": "Polygon"
           },
-          "id": "c7b976be-ec39-4d5a-abb7-cac82178727e"
+          "id": "c7b976be-ec39-4d5a-abb7-cac82178727e",
+          "azimuth": 4
         }
       ],
       "modules": [
         {
-          "id": "ac0a5803-cab0-423f-9b1b-d843e505843e",
           "orientation": "portrait",
           "y": -2.169203413897075,
           "x": 6.045629877449827,
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "moduleTypeId": "standard-400w"
+          "moduleTypeId": "standard-400w",
+          "id": "ac0a5803-cab0-423f-9b1b-d843e505843e"
         },
         {
-          "orientation": "portrait",
           "id": "d84dda14-fc5a-471a-9974-454f5541301d",
-          "y": -0.5717259580335456,
-          "moduleTypeId": "standard-400w",
           "x": 6.04562987709925,
+          "orientation": "portrait",
+          "moduleTypeId": "standard-400w",
+          "y": -0.5717259580335456,
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
         },
         {
-          "orientation": "portrait",
-          "moduleTypeId": "standard-400w",
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "id": "ef8f79e4-7e96-483a-bee6-9cf38fccafd9",
           "x": 6.045629876748673,
-          "y": 1.0257514978299833,
-          "id": "ef8f79e4-7e96-483a-bee6-9cf38fccafd9"
+          "orientation": "portrait",
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "moduleTypeId": "standard-400w",
+          "y": 1.0257514978299833
         },
         {
-          "orientation": "portrait",
-          "moduleTypeId": "standard-400w",
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "x": -6.844906272493161,
           "y": -0.6148775019547592,
           "id": "efae11d8-df37-491c-ab40-757cb4ef0845",
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "x": -6.844906272493161
-        },
-        {
-          "y": -0.6148775019547592,
           "orientation": "portrait",
-          "id": "1c06ad32-a9cc-4763-892d-f7e1abefa0cd",
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "moduleTypeId": "standard-400w",
-          "x": -5.7949062724931615
-        },
-        {
-          "moduleTypeId": "standard-400w",
-          "id": "fff9616b-ee23-4437-9e8a-ab8b22dc704e",
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "orientation": "portrait",
-          "x": -4.744906272493162,
-          "y": -0.6148775019547592
-        },
-        {
-          "orientation": "portrait",
-          "x": -3.694906272493162,
-          "moduleTypeId": "standard-400w",
-          "y": -0.6148775019547592,
-          "id": "21249d2e-683d-46a7-9cd3-ea874ab0cf51",
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938"
-        },
-        {
-          "id": "30bee149-01b6-4c14-9f29-b7a2202a177b",
-          "y": -0.6148775019547592,
-          "orientation": "portrait",
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "x": -2.644906272493162,
           "moduleTypeId": "standard-400w"
         },
         {
-          "moduleTypeId": "standard-400w",
-          "id": "5545a998-810c-4045-901f-7929185fa5be",
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "x": -1.594906272493162,
           "orientation": "portrait",
+          "moduleTypeId": "standard-400w",
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "x": -5.7949062724931615,
+          "id": "1c06ad32-a9cc-4763-892d-f7e1abefa0cd",
           "y": -0.6148775019547592
         },
         {
+          "moduleTypeId": "standard-400w",
+          "y": -0.6148775019547592,
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "id": "fff9616b-ee23-4437-9e8a-ab8b22dc704e",
+          "x": -4.744906272493162,
+          "orientation": "portrait"
+        },
+        {
+          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "id": "21249d2e-683d-46a7-9cd3-ea874ab0cf51",
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "x": -3.694906272493162,
+          "y": -0.6148775019547592
+        },
+        {
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "x": -2.644906272493162,
+          "y": -0.6148775019547592,
+          "moduleTypeId": "standard-400w",
+          "id": "30bee149-01b6-4c14-9f29-b7a2202a177b",
+          "orientation": "portrait"
+        },
+        {
+          "id": "5545a998-810c-4045-901f-7929185fa5be",
+          "moduleTypeId": "standard-400w",
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "y": -0.6148775019547592,
+          "orientation": "portrait",
+          "x": -1.594906272493162
+        },
+        {
+          "moduleTypeId": "standard-400w",
           "id": "52786740-ac09-42eb-ab1b-9ebabf6a6357",
           "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "y": -0.6148775019547592,
-          "x": -0.5449062724931619,
-          "moduleTypeId": "standard-400w",
-          "orientation": "portrait"
-        },
-        {
-          "id": "634c51d1-20ac-492b-bb1f-329df9b50849",
-          "x": 0.5050937275068381,
-          "moduleTypeId": "standard-400w",
-          "y": -0.6148775019547592,
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "orientation": "portrait"
-        },
-        {
           "orientation": "portrait",
-          "id": "9fe716fe-13d3-425e-8ef0-f4bd5034dd1a",
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "moduleTypeId": "standard-400w",
-          "x": 1.5550937275068382,
+          "x": -0.5449062724931619,
           "y": -0.6148775019547592
         },
         {
+          "x": 0.5050937275068381,
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "orientation": "portrait",
+          "y": -0.6148775019547592,
           "moduleTypeId": "standard-400w",
+          "id": "634c51d1-20ac-492b-bb1f-329df9b50849"
+        },
+        {
+          "moduleTypeId": "standard-400w",
+          "x": 1.5550937275068382,
+          "y": -0.6148775019547592,
+          "orientation": "portrait",
+          "id": "9fe716fe-13d3-425e-8ef0-f4bd5034dd1a",
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938"
+        },
+        {
+          "x": 2.605093727506838,
           "id": "5af765ee-4b07-4972-b78d-d56da5c992cd",
           "y": -0.6148775019547592,
-          "x": 2.605093727506838,
           "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "orientation": "portrait"
+          "orientation": "portrait",
+          "moduleTypeId": "standard-400w"
         },
         {
           "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
           "id": "804f3c48-359f-4402-b94f-d670a781f096",
           "moduleTypeId": "standard-400w",
           "x": 3.655093727506838,
-          "y": -0.6148775019547592,
-          "orientation": "portrait"
+          "orientation": "portrait",
+          "y": -0.6148775019547592
         },
         {
+          "x": 4.705093727506838,
           "y": -0.6148775019547592,
-          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
           "id": "4529952f-2ca8-4e97-ae55-e8918930045b",
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "orientation": "portrait",
-          "x": 4.705093727506838
-        },
-        {
-          "y": 0.982599953381285,
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "x": -6.844906272493161,
-          "id": "43a7da22-c298-4420-ac90-8a5312957f9e",
-          "moduleTypeId": "standard-400w",
-          "orientation": "portrait"
-        },
-        {
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "y": 0.982599953381285,
-          "id": "a8d0fca9-fcf4-498f-8e3f-c0a1bbbda51f",
-          "orientation": "portrait",
-          "x": -5.7949062724931615,
           "moduleTypeId": "standard-400w"
         },
         {
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "orientation": "portrait",
+          "y": 0.982599953381285,
+          "id": "43a7da22-c298-4420-ac90-8a5312957f9e",
+          "x": -6.844906272493161,
+          "moduleTypeId": "standard-400w"
+        },
+        {
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "moduleTypeId": "standard-400w",
+          "x": -5.7949062724931615,
+          "y": 0.982599953381285,
+          "orientation": "portrait",
+          "id": "a8d0fca9-fcf4-498f-8e3f-c0a1bbbda51f"
+        },
+        {
+          "moduleTypeId": "standard-400w",
+          "x": -4.744906272493162,
           "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
           "id": "bf5e435b-6dbc-423d-b781-5434832c1a82",
           "y": 0.982599953381285,
-          "x": -4.744906272493162,
-          "orientation": "portrait",
-          "moduleTypeId": "standard-400w"
-        },
-        {
-          "x": -3.694906272493162,
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "y": 0.982599953381285,
-          "id": "cdede320-1b7a-4385-a63b-73b4141aa10f",
-          "moduleTypeId": "standard-400w",
           "orientation": "portrait"
         },
         {
+          "x": -3.694906272493162,
+          "id": "cdede320-1b7a-4385-a63b-73b4141aa10f",
           "moduleTypeId": "standard-400w",
-          "x": -2.644906272493162,
           "orientation": "portrait",
           "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "id": "6b56b62a-97a1-4536-93e8-ce19e9e3f383",
           "y": 0.982599953381285
         },
         {
-          "orientation": "portrait",
-          "x": -1.594906272493162,
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "id": "2403d72b-5785-4e7d-a24a-84b96879a710",
           "moduleTypeId": "standard-400w",
+          "id": "6b56b62a-97a1-4536-93e8-ce19e9e3f383",
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "x": -2.644906272493162,
+          "orientation": "portrait",
           "y": 0.982599953381285
+        },
+        {
+          "y": 0.982599953381285,
+          "x": -1.594906272493162,
+          "id": "2403d72b-5785-4e7d-a24a-84b96879a710",
+          "orientation": "portrait",
+          "moduleTypeId": "standard-400w",
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938"
         },
         {
           "moduleTypeId": "standard-400w",
           "y": 0.982599953381285,
           "id": "e2a7a6de-c10f-458c-8018-d4a9179ada01",
           "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "x": -0.5449062724931619,
-          "orientation": "portrait"
+          "orientation": "portrait",
+          "x": -0.5449062724931619
         },
         {
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
           "moduleTypeId": "standard-400w",
-          "x": 0.5050937275068381,
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
           "id": "07e8c047-f690-45e2-95ca-89a11bbdb1d8",
+          "x": 0.5050937275068381,
           "y": 0.982599953381285,
           "orientation": "portrait"
         },
         {
           "moduleTypeId": "standard-400w",
-          "x": 1.5550937275068382,
-          "id": "7d61acad-19fe-483e-ad79-11bc67a83f4f",
           "y": 0.982599953381285,
           "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "orientation": "portrait"
+          "x": 1.5550937275068382,
+          "orientation": "portrait",
+          "id": "7d61acad-19fe-483e-ad79-11bc67a83f4f"
         },
         {
-          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "y": 0.982599953381285,
           "moduleTypeId": "standard-400w",
           "x": 2.605093727506838,
           "orientation": "portrait",
-          "id": "2f38fa1c-d69e-4bf2-9308-bebf01419921",
-          "y": 0.982599953381285
+          "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "id": "2f38fa1c-d69e-4bf2-9308-bebf01419921"
         },
         {
-          "id": "50c2072e-b7e9-46c0-bc84-1962f927d1ef",
-          "orientation": "portrait",
           "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
+          "orientation": "portrait",
+          "id": "50c2072e-b7e9-46c0-bc84-1962f927d1ef",
           "x": 3.655093727506838,
           "moduleTypeId": "standard-400w",
           "y": 0.982599953381285
         },
         {
           "orientation": "portrait",
+          "id": "056c256a-4384-44ab-b249-e913bc9d77be",
           "x": 4.705093727506838,
           "moduleTypeId": "standard-400w",
           "roofId": "a900d6b9-6723-4d3f-a517-e9d22c209938",
-          "id": "056c256a-4384-44ab-b249-e913bc9d77be",
           "y": 0.982599953381285
         },
         {
-          "orientation": "portrait",
           "y": -2.1692034130297553,
+          "orientation": "portrait",
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "moduleTypeId": "standard-400w",
           "id": "b0422aed-25f8-4607-b503-aa4b0516efc2",
-          "x": -9.704370123134279
+          "x": -9.704370123134279,
+          "moduleTypeId": "standard-400w"
         },
         {
+          "orientation": "portrait",
           "id": "82eefa80-fc46-476b-b84f-3fab3ac7ad21",
           "moduleTypeId": "standard-400w",
-          "orientation": "portrait",
-          "x": -8.654370122773791,
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
           "y": -2.169203413150247,
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
+          "x": -8.654370122773791
         },
         {
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "orientation": "portrait",
           "x": -7.604370123202356,
           "moduleTypeId": "standard-400w",
           "y": -2.169203413325915,
-          "orientation": "portrait",
-          "id": "fc12f11f-66ef-429e-a173-cc567e67d8f6",
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
+          "id": "fc12f11f-66ef-429e-a173-cc567e67d8f6"
         },
         {
           "y": -2.169203413446407,
-          "orientation": "portrait",
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
           "x": -6.55437012284187,
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "orientation": "portrait",
           "id": "9ed55e9d-8df1-4ec8-840d-2cc49d7dba25",
           "moduleTypeId": "standard-400w"
         },
         {
-          "id": "9c7ec7f0-3630-4541-9214-8590349f35e2",
           "orientation": "portrait",
+          "id": "9c7ec7f0-3630-4541-9214-8590349f35e2",
           "moduleTypeId": "standard-400w",
           "x": -5.504370123270433,
           "y": -2.169203413622075,
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
         },
         {
+          "orientation": "portrait",
           "id": "a26b3438-162e-4017-a1ba-45b03ed46787",
+          "moduleTypeId": "standard-400w",
+          "x": 0.7956298769638052,
           "y": -0.5717259585918496,
-          "orientation": "portrait",
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "moduleTypeId": "standard-400w",
-          "x": 0.7956298769638052
-        },
-        {
-          "orientation": "portrait",
-          "id": "25cc97cb-8124-41b9-a10b-db15ff072c89",
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "moduleTypeId": "standard-400w",
-          "x": 1.8456298765352415,
-          "y": -0.5717259587675175
-        },
-        {
-          "id": "9e301503-6330-495e-832f-06737531d8e7",
-          "x": 4.995629877089342,
-          "orientation": "portrait",
-          "y": -2.1692034137765828,
-          "moduleTypeId": "standard-400w",
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
         },
         {
-          "orientation": "portrait",
-          "x": -9.704370122606921,
-          "id": "d2f91df8-aa01-443f-9bd9-f39f896cdd7c",
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "x": 1.8456298765352415,
+          "y": -0.5717259587675175,
           "moduleTypeId": "standard-400w",
-          "y": -0.5717259583821663
-        },
-        {
-          "y": -0.571725958557834,
-          "x": -8.654370123035484,
-          "moduleTypeId": "standard-400w",
-          "id": "ab2f87b4-cf19-4944-9ed2-c60797b7fcbd",
+          "id": "25cc97cb-8124-41b9-a10b-db15ff072c89",
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
           "orientation": "portrait"
         },
         {
+          "x": 4.995629877089342,
+          "id": "9e301503-6330-495e-832f-06737531d8e7",
           "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "y": -2.1692034137765828,
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
+        },
+        {
+          "orientation": "portrait",
+          "y": -0.5717259583821663,
+          "moduleTypeId": "standard-400w",
+          "id": "d2f91df8-aa01-443f-9bd9-f39f896cdd7c",
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "x": -9.704370122606921
+        },
+        {
+          "y": -0.571725958557834,
+          "orientation": "portrait",
+          "id": "ab2f87b4-cf19-4944-9ed2-c60797b7fcbd",
+          "x": -8.654370123035484,
+          "moduleTypeId": "standard-400w",
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
+        },
+        {
           "orientation": "portrait",
           "id": "9f94254f-94ed-4168-ba0c-a6f8099a5d2b",
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
           "y": -0.5717259586783261,
-          "x": -7.6043701226749985
+          "x": -7.6043701226749985,
+          "moduleTypeId": "standard-400w"
         },
         {
           "id": "c08570cb-afd0-4f12-96a1-a9634a72bc33",
-          "x": -6.554370123192447,
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "orientation": "portrait",
-          "y": -0.571725957582878,
-          "moduleTypeId": "standard-400w"
-        },
-        {
-          "orientation": "portrait",
-          "y": -0.5717259577033701,
           "moduleTypeId": "standard-400w",
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "y": -0.571725957582878,
+          "orientation": "portrait",
+          "x": -6.554370123192447
+        },
+        {
+          "x": -5.504370122831961,
+          "y": -0.5717259577033701,
+          "orientation": "portrait",
           "id": "7f0a66db-1820-4bde-b95e-d23b9a3cf16e",
-          "x": -5.504370122831961
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "moduleTypeId": "standard-400w"
         },
         {
           "id": "6fc20832-9395-44e0-82ae-3ad2c49514b3",
-          "x": 0.7956298766132277,
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
           "y": 1.0257514972716792,
           "orientation": "portrait",
-          "moduleTypeId": "standard-400w"
+          "moduleTypeId": "standard-400w",
+          "x": 0.7956298766132277
         },
         {
-          "id": "4c1ed79e-b21c-4042-93de-d54f850356d7",
           "y": 1.0257514971511872,
-          "moduleTypeId": "standard-400w",
-          "x": 1.8456298769737134,
+          "id": "4c1ed79e-b21c-4042-93de-d54f850356d7",
           "orientation": "portrait",
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "moduleTypeId": "standard-400w",
+          "x": 1.8456298769737134
         },
         {
           "x": 4.995629876738764,
           "moduleTypeId": "standard-400w",
           "id": "217bd57a-6063-4f50-9b2f-2f8d1da683ef",
-          "y": -0.5717259579130536,
+          "orientation": "portrait",
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "y": -0.5717259579130536
+        },
+        {
+          "id": "43a476d6-099c-4cee-9fcf-e3e54b292e1f",
+          "orientation": "portrait",
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "x": -9.7043701229575,
+          "y": 1.0257514974813629,
+          "moduleTypeId": "standard-400w"
+        },
+        {
+          "x": -8.654370122597012,
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "id": "39517155-7b81-4966-a605-56da691730d8",
+          "y": 1.0257514973608706,
+          "moduleTypeId": "standard-400w",
+          "orientation": "portrait"
+        },
+        {
+          "orientation": "portrait",
+          "y": 1.025751497185203,
+          "moduleTypeId": "standard-400w",
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "id": "79c45755-27f0-461f-8dc2-b345e546b9a7",
+          "x": -7.604370123025576
+        },
+        {
+          "x": -6.55437012266509,
+          "y": 1.025751497064711,
+          "orientation": "portrait",
+          "id": "c1cddca7-134d-4d33-8ad2-04281b5bfa77",
+          "moduleTypeId": "standard-400w",
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
+        },
+        {
+          "x": -5.504370123093653,
+          "y": 1.0257514968890433,
+          "id": "e293b14b-bf8d-494a-a12c-757be770631e",
+          "moduleTypeId": "standard-400w",
           "orientation": "portrait",
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228"
         },
         {
           "moduleTypeId": "standard-400w",
-          "id": "43a476d6-099c-4cee-9fcf-e3e54b292e1f",
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "y": 1.0257514974813629,
-          "orientation": "portrait",
-          "x": -9.7043701229575
-        },
-        {
-          "y": 1.0257514973608706,
-          "orientation": "portrait",
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "moduleTypeId": "standard-400w",
-          "x": -8.654370122597012,
-          "id": "39517155-7b81-4966-a605-56da691730d8"
-        },
-        {
-          "orientation": "portrait",
-          "id": "79c45755-27f0-461f-8dc2-b345e546b9a7",
-          "y": 1.025751497185203,
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "moduleTypeId": "standard-400w",
-          "x": -7.604370123025576
-        },
-        {
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "id": "c1cddca7-134d-4d33-8ad2-04281b5bfa77",
-          "moduleTypeId": "standard-400w",
-          "x": -6.55437012266509,
-          "y": 1.025751497064711,
-          "orientation": "portrait"
-        },
-        {
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "moduleTypeId": "standard-400w",
-          "y": 1.0257514968890433,
-          "id": "e293b14b-bf8d-494a-a12c-757be770631e",
-          "x": -5.504370123093653,
-          "orientation": "portrait"
-        },
-        {
-          "id": "b86fedc5-7586-4572-96eb-dfe6ebd24c57",
-          "x": 2.895629877334199,
-          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "moduleTypeId": "standard-400w",
           "y": 1.0257514970306951,
-          "orientation": "portrait"
+          "id": "b86fedc5-7586-4572-96eb-dfe6ebd24c57",
+          "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
+          "orientation": "portrait",
+          "x": 2.895629877334199
         },
         {
-          "x": 3.9456298769056355,
+          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
           "id": "22ae2d72-1fe8-41b2-a54c-8c0fd9b938e9",
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "orientation": "portrait",
-          "moduleTypeId": "standard-400w",
-          "y": 1.0257514968550274
+          "y": 1.0257514968550274,
+          "x": 3.9456298769056355
         },
         {
-          "y": 1.0257514967345354,
-          "moduleTypeId": "standard-400w",
           "id": "8c0034d4-b98f-47ba-a003-034508550e46",
-          "x": 4.995629877266121,
           "roofId": "ec69cdf8-2d1a-46dd-af5c-67a18f48d228",
-          "orientation": "portrait"
-        },
-        {
-          "id": "e52be28e-e35c-4c77-be68-15c65ed6dce7",
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "x": -4.038651829422434,
-          "moduleTypeId": "standard-400w",
-          "y": -1.7805351603378463,
-          "orientation": "portrait"
-        },
-        {
-          "y": -1.7805351603378463,
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "x": -2.988651829422434,
           "orientation": "portrait",
-          "moduleTypeId": "standard-400w",
-          "id": "67013a8e-7027-4a34-b7f3-6fbb7d5273af"
-        },
-        {
-          "x": -1.9386518294224337,
-          "y": -1.7805351603378463,
-          "orientation": "portrait",
-          "id": "93a0e937-86e1-42b9-adb9-feb0280e3cd6",
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "x": 4.995629877266121,
+          "y": 1.0257514967345354,
           "moduleTypeId": "standard-400w"
         },
         {
+          "id": "e52be28e-e35c-4c77-be68-15c65ed6dce7",
+          "y": -1.7805351603378463,
+          "x": -4.038651829422434,
           "orientation": "portrait",
           "moduleTypeId": "standard-400w",
-          "id": "c4aa558b-c3a7-4a62-8ea3-5831703af642",
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
+        },
+        {
+          "orientation": "portrait",
+          "x": -2.988651829422434,
+          "moduleTypeId": "standard-400w",
+          "id": "67013a8e-7027-4a34-b7f3-6fbb7d5273af",
+          "y": -1.7805351603378463,
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
+        },
+        {
+          "x": -1.9386518294224337,
+          "orientation": "portrait",
+          "id": "93a0e937-86e1-42b9-adb9-feb0280e3cd6",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "x": -0.8886518294224337,
+          "moduleTypeId": "standard-400w",
           "y": -1.7805351603378463
+        },
+        {
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "moduleTypeId": "standard-400w",
+          "y": -1.7805351603378463,
+          "x": -0.8886518294224337,
+          "orientation": "portrait",
+          "id": "c4aa558b-c3a7-4a62-8ea3-5831703af642"
         },
         {
           "x": 0.16134817057756634,
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "moduleTypeId": "standard-400w",
-          "orientation": "portrait",
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "id": "6f217878-be8b-4808-b778-21b2dcf82244",
+          "orientation": "portrait",
           "y": -1.7805351603378463
         },
         {
-          "y": -1.7805351603378463,
-          "orientation": "portrait",
           "id": "a7326731-a007-4416-bd6c-b93212580a94",
-          "moduleTypeId": "standard-400w",
+          "y": -1.7805351603378463,
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "orientation": "portrait",
+          "moduleTypeId": "standard-400w",
           "x": 1.2113481705775664
         },
         {
-          "id": "92abcd03-e768-4b4d-9797-217a3bf4665a",
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "moduleTypeId": "standard-400w",
           "x": 2.261348170577566,
           "y": -1.7805351603378463,
-          "orientation": "portrait"
+          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "id": "92abcd03-e768-4b4d-9797-217a3bf4665a"
         },
         {
+          "moduleTypeId": "standard-400w",
+          "x": 3.311348170577566,
           "orientation": "portrait",
           "id": "3fdf11a3-68c5-4df4-9840-9ff7b6eb6f91",
           "y": -1.7805351603378463,
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "moduleTypeId": "standard-400w",
-          "x": 3.311348170577566
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
         },
         {
-          "x": 4.361348170577566,
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "y": -1.7805351603378463,
+          "orientation": "portrait",
           "moduleTypeId": "standard-400w",
           "id": "4635bec0-2ddb-4145-8374-c129aeb823f9",
-          "y": -1.7805351603378463,
-          "orientation": "portrait"
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "x": 4.361348170577566
         },
         {
           "x": 5.411348170577566,
-          "y": -1.7805351603378463,
           "orientation": "portrait",
           "moduleTypeId": "standard-400w",
           "id": "7ae9f87f-ff9b-4ba6-84b6-5bc9ecbb88cd",
+          "y": -1.7805351603378463,
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
         },
         {
+          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "id": "f19c54e8-5d5d-4f68-8d8e-d6c24b3b6462",
           "x": 6.4613481705775655,
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "y": -1.7805351603378463
+        },
+        {
           "orientation": "portrait",
           "moduleTypeId": "standard-400w",
-          "y": -1.7805351603378463,
-          "id": "f19c54e8-5d5d-4f68-8d8e-d6c24b3b6462",
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
-        },
-        {
           "id": "c41274bc-5108-4892-90d0-0b4e83b42169",
-          "moduleTypeId": "standard-400w",
-          "x": 7.511348170577565,
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "y": -1.7805351603378463,
-          "orientation": "portrait"
+          "x": 7.511348170577565,
+          "y": -1.7805351603378463
         },
         {
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "orientation": "portrait",
           "y": -0.5784536323207154,
           "moduleTypeId": "standard-400w",
-          "orientation": "portrait",
           "x": -4.038651829422434,
-          "id": "e2e8ba3b-1a1c-42f6-8ae2-fa5c48adeb8e"
+          "id": "e2e8ba3b-1a1c-42f6-8ae2-fa5c48adeb8e",
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
         },
         {
           "x": -2.988651829422434,
-          "y": -0.5784536323207154,
-          "id": "d169c5bd-a58a-414e-bf1e-069dc6a81297",
+          "orientation": "portrait",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "y": -0.5784536323207154,
           "moduleTypeId": "standard-400w",
-          "orientation": "portrait"
+          "id": "d169c5bd-a58a-414e-bf1e-069dc6a81297"
         },
         {
-          "orientation": "portrait",
-          "id": "cdccc769-c139-4720-b9c8-d0a115ce6ff1",
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "x": -1.9386518294224337,
-          "moduleTypeId": "standard-400w",
-          "y": -0.5784536323207154
+          "y": -0.5784536323207154,
+          "orientation": "portrait",
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "id": "cdccc769-c139-4720-b9c8-d0a115ce6ff1",
+          "moduleTypeId": "standard-400w"
         },
         {
           "id": "b4d27899-fc76-489e-a7cb-f218b87e536e",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "moduleTypeId": "standard-400w",
-          "x": -0.8886518294224337,
           "y": -0.5784536323207154,
-          "orientation": "portrait"
+          "orientation": "portrait",
+          "moduleTypeId": "standard-400w",
+          "x": -0.8886518294224337
         },
         {
-          "x": 0.16134817057756634,
+          "y": -0.5784536323207154,
           "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "id": "c6c6c26e-dcfd-4bd0-b299-71683dd94818",
-          "orientation": "portrait",
-          "y": -0.5784536323207154,
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
+          "x": 0.16134817057756634
         },
         {
-          "x": 1.2113481705775664,
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "x": 1.2113481705775664,
           "id": "8e88ebf3-2805-4741-a09d-25913b2f4f6f",
-          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
           "y": -0.5784536323207154,
+          "moduleTypeId": "standard-400w"
+        },
+        {
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "x": 2.261348170577566,
+          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "id": "4da7691a-7947-4a2f-8d2b-748021947a09",
+          "y": -0.5784536323207154
+        },
+        {
+          "id": "4d00da00-af84-4391-bce4-d62b90438b0a",
+          "x": 3.311348170577566,
+          "orientation": "portrait",
+          "moduleTypeId": "standard-400w",
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "y": -0.5784536323207154
+        },
+        {
+          "orientation": "portrait",
+          "y": -0.5784536323207154,
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "x": 4.361348170577566,
+          "moduleTypeId": "standard-400w",
+          "id": "3be0044d-eb91-4ef4-9ef0-ca6ee623d5bb"
+        },
+        {
+          "y": -0.5784536323207154,
+          "id": "8bda39a5-7082-40db-9343-af075d9670cc",
+          "moduleTypeId": "standard-400w",
+          "x": 5.411348170577566,
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "orientation": "portrait"
         },
         {
-          "y": -0.5784536323207154,
-          "orientation": "portrait",
           "moduleTypeId": "standard-400w",
-          "id": "4da7691a-7947-4a2f-8d2b-748021947a09",
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "x": 2.261348170577566
-        },
-        {
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "x": 3.311348170577566,
-          "id": "4d00da00-af84-4391-bce4-d62b90438b0a",
           "y": -0.5784536323207154,
-          "orientation": "portrait",
-          "moduleTypeId": "standard-400w"
-        },
-        {
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "y": -0.5784536323207154,
-          "id": "3be0044d-eb91-4ef4-9ef0-ca6ee623d5bb",
-          "x": 4.361348170577566,
-          "orientation": "portrait",
-          "moduleTypeId": "standard-400w"
-        },
-        {
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "x": 5.411348170577566,
-          "y": -0.5784536323207154,
-          "orientation": "portrait",
-          "moduleTypeId": "standard-400w",
-          "id": "8bda39a5-7082-40db-9343-af075d9670cc"
-        },
-        {
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "id": "c2a1b107-17eb-4a93-bbf6-8bc25d55dc5a",
-          "x": 6.4613481705775655,
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "orientation": "portrait",
-          "y": -0.5784536323207154,
-          "moduleTypeId": "standard-400w"
+          "x": 6.4613481705775655
         },
         {
-          "id": "fcf6803c-7339-4b56-a593-b82fc4e91b65",
           "y": -0.5784536323207154,
+          "x": 7.511348170577565,
           "orientation": "portrait",
           "moduleTypeId": "standard-400w",
-          "x": 7.511348170577565,
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "id": "fcf6803c-7339-4b56-a593-b82fc4e91b65"
         },
         {
-          "x": -4.038651829422434,
-          "y": 0.6236278956964154,
-          "orientation": "portrait",
-          "id": "7a66eadd-02d3-42ab-a569-4afab60d8ec8",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "moduleTypeId": "standard-400w"
+          "moduleTypeId": "standard-400w",
+          "orientation": "portrait",
+          "x": -4.038651829422434,
+          "id": "7a66eadd-02d3-42ab-a569-4afab60d8ec8",
+          "y": 0.6236278956964154
         },
         {
           "id": "04921a97-8e94-4d34-b7ef-376222e87933",
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "x": -2.988651829422434,
           "moduleTypeId": "standard-400w",
-          "y": 0.6236278956964154,
           "orientation": "portrait",
+          "y": 0.6236278956964154
+        },
+        {
+          "moduleTypeId": "standard-400w",
+          "y": 0.6236278956964154,
+          "id": "3ea08a5d-be1f-48c3-bcc2-fef1b6227a72",
+          "orientation": "portrait",
+          "x": -1.9386518294224337,
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
         },
         {
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "y": 0.6236278956964154,
+          "id": "c31344df-6640-4595-9247-9b62951cdd21",
           "orientation": "portrait",
-          "x": -1.9386518294224337,
-          "id": "3ea08a5d-be1f-48c3-bcc2-fef1b6227a72",
+          "y": 0.6236278956964154,
+          "x": -0.8886518294224337,
           "moduleTypeId": "standard-400w"
         },
         {
-          "id": "c31344df-6640-4595-9247-9b62951cdd21",
-          "moduleTypeId": "standard-400w",
-          "x": -0.8886518294224337,
-          "orientation": "portrait",
           "y": 0.6236278956964154,
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
-        },
-        {
           "id": "ba387510-da29-485c-a6f9-5815fb992b9e",
-          "y": 0.6236278956964154,
           "moduleTypeId": "standard-400w",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "x": 0.16134817057756634,
           "orientation": "portrait"
         },
         {
-          "y": 0.6236278956964154,
           "orientation": "portrait",
-          "moduleTypeId": "standard-400w",
-          "id": "868f10ef-dc09-4315-bddd-f6cc8f8b1c01",
+          "x": 1.2113481705775664,
+          "y": 0.6236278956964154,
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "x": 1.2113481705775664
+          "moduleTypeId": "standard-400w",
+          "id": "868f10ef-dc09-4315-bddd-f6cc8f8b1c01"
         },
         {
           "id": "f29098c1-1441-4707-830a-0928778af6c7",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "moduleTypeId": "standard-400w",
           "orientation": "portrait",
           "x": 2.261348170577566,
+          "moduleTypeId": "standard-400w",
           "y": 0.6236278956964154
         },
         {
-          "y": 0.6236278956964154,
-          "orientation": "portrait",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "moduleTypeId": "standard-400w",
           "id": "4c4beec1-5b2a-4b93-9688-c70486db345b",
-          "moduleTypeId": "standard-400w",
-          "x": 3.311348170577566
+          "x": 3.311348170577566,
+          "orientation": "portrait",
+          "y": 0.6236278956964154
         },
         {
+          "orientation": "portrait",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "moduleTypeId": "standard-400w",
+          "id": "a8fe37e9-e317-4957-9c5d-c150b98e5b9f",
           "x": 4.361348170577566,
-          "orientation": "portrait",
-          "y": 0.6236278956964154,
-          "id": "a8fe37e9-e317-4957-9c5d-c150b98e5b9f"
+          "y": 0.6236278956964154
         },
         {
+          "x": 5.411348170577566,
+          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
+          "id": "d9345e83-1a99-4896-a383-58411c995d73",
+          "y": 0.6236278956964154,
+          "orientation": "portrait",
+          "moduleTypeId": "standard-400w"
+        },
+        {
+          "x": 6.4613481705775655,
           "moduleTypeId": "standard-400w",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
-          "x": 5.411348170577566,
-          "y": 0.6236278956964154,
-          "id": "d9345e83-1a99-4896-a383-58411c995d73",
-          "orientation": "portrait"
-        },
-        {
-          "id": "dd82031e-7edb-4890-85f9-bc982647ae65",
           "y": 0.6236278956964154,
           "orientation": "portrait",
-          "moduleTypeId": "standard-400w",
-          "x": 6.4613481705775655,
-          "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035"
+          "id": "dd82031e-7edb-4890-85f9-bc982647ae65"
         },
         {
+          "moduleTypeId": "standard-400w",
           "y": 0.6236278956964154,
+          "id": "6eaa4a9d-c8b6-4058-9ac3-4c474052ed3c",
           "roofId": "190d8a5c-5fe6-4a9c-99ad-f7b0a6d35035",
           "x": 7.511348170577565,
-          "moduleTypeId": "standard-400w",
-          "id": "6eaa4a9d-c8b6-4058-9ac3-4c474052ed3c",
           "orientation": "portrait"
         }
       ],
       "obstructions": [
         {
+          "y": -5.319486252230861,
           "x": 0.7123311914743891,
-          "id": "834e72d9-a4a9-45c4-b65a-a1641a0bc366",
           "roofId": "0aa63859-f1d7-4745-ac00-85f8e38fc892",
           "shape": {
-            "width": 0.9782701174522334,
             "kind": "rectangle",
+            "width": 0.9782701174522334,
             "height": 0.6697453415157275
           },
-          "y": -5.319486252230861
+          "id": "834e72d9-a4a9-45c4-b65a-a1641a0bc366"
         },
         {
-          "id": "8494c1d1-b06b-464e-952c-68bc4f348b56",
-          "roofId": "0aa63859-f1d7-4745-ac00-85f8e38fc892",
-          "x": -1.0661590800484144,
-          "y": -5.31158841444507,
           "shape": {
             "kind": "circle",
             "radius": 0.22392090137290196
-          }
+          },
+          "x": -1.0661590800484144,
+          "y": -5.31158841444507,
+          "id": "8494c1d1-b06b-464e-952c-68bc4f348b56",
+          "roofId": "0aa63859-f1d7-4745-ac00-85f8e38fc892"
         },
         {
           "y": -5.53554240151362,
-          "shape": {
-            "width": 1.0692040809646226,
-            "height": 0.5070241234077182,
-            "kind": "rectangle"
-          },
           "roofId": "0aa63859-f1d7-4745-ac00-85f8e38fc892",
+          "x": 6.582609615957087,
           "id": "413e0a34-d6c2-4581-801f-405b3a3f9e02",
-          "x": 6.582609615957087
+          "shape": {
+            "height": 0.5070241234077182,
+            "width": 1.0692040809646226,
+            "kind": "rectangle"
+          }
         }
       ],
+      "screenshotUrl": "/examples/1612-north-aspen-court.png",
       "createdAt": "2026-09-07T22:40:24.571Z",
-      "updatedAt": "2026-09-07T22:40:24.571Z"
+      "updatedAt": "2026-09-08T20:35:52.874Z"
     }
   ]
 }
