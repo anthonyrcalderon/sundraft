@@ -352,94 +352,100 @@ export default function OpenedProjectView({ project, onBack }: Props) {
         </p>
       )}
 
-      <MapView
-        center={center}
-        roofs={roofs}
-        drawing={drawing}
-        onRoofDrawn={handleRoofDrawn}
-        onCancelDrawing={() => setDrawing(false)}
-        modules={modules}
-        moduleTypes={MODULE_TYPES}
-        pendingPlacement={pendingPlacement}
-        onPlacementResolved={handlePlacementResolved}
-        onGroupMoveResolved={handleGroupMoveResolved}
-        onCancelPlacement={() => setPendingPlacement(null)}
-        selectedModuleIds={selectedModuleIds}
-        onModuleClick={handleModuleClick}
-        onModuleDoubleClick={handleModuleDoubleClick}
-        onRectSelect={handleRectSelect}
-        selectedRoofId={selectedRoofId}
-        onRoofClick={handleRoofClick}
-        obstructions={obstructions}
-        pendingObstructionShape={pendingObstructionShape}
-        onObstructionDrawn={handleObstructionDrawn}
-        onCancelObstructionDraw={() => setPendingObstructionShape(null)}
-        selectedObstructionId={selectedObstructionId}
-        onObstructionClick={handleObstructionClick}
-        onObstructionChange={handleObstructionChange}
-      />
+      <div className="workspace">
+        <div className="map-column">
+          <MapView
+            center={center}
+            roofs={roofs}
+            drawing={drawing}
+            onRoofDrawn={handleRoofDrawn}
+            onCancelDrawing={() => setDrawing(false)}
+            modules={modules}
+            moduleTypes={MODULE_TYPES}
+            pendingPlacement={pendingPlacement}
+            onPlacementResolved={handlePlacementResolved}
+            onGroupMoveResolved={handleGroupMoveResolved}
+            onCancelPlacement={() => setPendingPlacement(null)}
+            selectedModuleIds={selectedModuleIds}
+            onModuleClick={handleModuleClick}
+            onModuleDoubleClick={handleModuleDoubleClick}
+            onRectSelect={handleRectSelect}
+            selectedRoofId={selectedRoofId}
+            onRoofClick={handleRoofClick}
+            obstructions={obstructions}
+            pendingObstructionShape={pendingObstructionShape}
+            onObstructionDrawn={handleObstructionDrawn}
+            onCancelObstructionDraw={() => setPendingObstructionShape(null)}
+            selectedObstructionId={selectedObstructionId}
+            onObstructionClick={handleObstructionClick}
+            onObstructionChange={handleObstructionChange}
+          />
 
-      {!center && (
-        <p className="muted small">
-          Search an address above to center the map on it — like your own
-          home or work, so you're designing on something familiar.
-        </p>
-      )}
+          {!center && (
+            <p className="muted small">
+              Search an address above to center the map on it — like your own
+              home or work, so you're designing on something familiar.
+            </p>
+          )}
 
-      <div className="roof-controls">
-        <button onClick={() => setDrawing(true)} disabled={busy}>
-          + Trace roof outline
-        </button>
-        <button onClick={handleAddModule} disabled={busy || roofs.length === 0}>
-          + Add module
-        </button>
-        <button onClick={() => handleAddObstruction("rectangle")} disabled={busy || roofs.length === 0}>
-          + Add obstruction (rectangle)
-        </button>
-        <button onClick={() => handleAddObstruction("circle")} disabled={busy || roofs.length === 0}>
-          + Add obstruction (circle)
-        </button>
+          <div className="roof-controls">
+            <button onClick={() => setDrawing(true)} disabled={busy}>
+              + Trace roof outline
+            </button>
+            <button onClick={handleAddModule} disabled={busy || roofs.length === 0}>
+              + Add module
+            </button>
+            <button onClick={() => handleAddObstruction("rectangle")} disabled={busy || roofs.length === 0}>
+              + Add obstruction (rectangle)
+            </button>
+            <button onClick={() => handleAddObstruction("circle")} disabled={busy || roofs.length === 0}>
+              + Add obstruction (circle)
+            </button>
+          </div>
+
+          {selectedModuleIds.length > 0 && (
+            <div className="module-controls">
+              <span>
+                {selectedModuleIds.length} module{selectedModuleIds.length === 1 ? "" : "s"} selected{" "}
+                <span className="muted small">— drag a selected module to move the group</span>
+              </span>
+              <button onClick={handleRotateSelected} disabled={selectedModuleIds.length !== 1}>
+                Rotate ↻
+              </button>
+              <button onClick={handleDeleteSelected}>Delete</button>
+            </div>
+          )}
+
+          {selectedObstructionId && (
+            <div className="module-controls">
+              <span>
+                Obstruction selected{" "}
+                <span className="muted small">— drag a handle to resize, or its body to move it</span>
+              </span>
+              <button className="danger-button" onClick={handleDeleteObstruction}>
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+
+        <aside className="roof-sidebar">
+          <RoofList
+            roofs={roofs}
+            modules={modules}
+            moduleTypes={MODULE_TYPES}
+            disabled={drawing || !!pendingPlacement || !!pendingObstructionShape}
+            selectedRoofId={selectedRoofId}
+            onSelectRoof={handleRoofClick}
+            isEditingRoof={isEditingRoof}
+            onToggleEditRoof={handleToggleEditRoof}
+            onDelete={handleDeleteRoof}
+            onFill={handleFillRoof}
+            onClear={handleClearRoof}
+            onUpdate={handleUpdateRoof}
+          />
+        </aside>
       </div>
-
-      {selectedModuleIds.length > 0 && (
-        <div className="module-controls">
-          <span>
-            {selectedModuleIds.length} module{selectedModuleIds.length === 1 ? "" : "s"} selected{" "}
-            <span className="muted small">— drag a selected module to move the group</span>
-          </span>
-          <button onClick={handleRotateSelected} disabled={selectedModuleIds.length !== 1}>
-            Rotate ↻
-          </button>
-          <button onClick={handleDeleteSelected}>Delete</button>
-        </div>
-      )}
-
-      {selectedObstructionId && (
-        <div className="module-controls">
-          <span>
-            Obstruction selected{" "}
-            <span className="muted small">— drag a handle to resize, or its body to move it</span>
-          </span>
-          <button className="danger-button" onClick={handleDeleteObstruction}>
-            Delete
-          </button>
-        </div>
-      )}
-
-      <RoofList
-        roofs={roofs}
-        modules={modules}
-        moduleTypes={MODULE_TYPES}
-        disabled={drawing || !!pendingPlacement || !!pendingObstructionShape}
-        selectedRoofId={selectedRoofId}
-        onSelectRoof={handleRoofClick}
-        isEditingRoof={isEditingRoof}
-        onToggleEditRoof={handleToggleEditRoof}
-        onDelete={handleDeleteRoof}
-        onFill={handleFillRoof}
-        onClear={handleClearRoof}
-        onUpdate={handleUpdateRoof}
-      />
     </div>
   );
 }
