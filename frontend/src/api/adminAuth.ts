@@ -1,27 +1,31 @@
-// Admin mode gates the UI only — it's a speed bump against casually
-// stumbling into template-editing controls, not real security. The backend's
-// own check (see infra/lambda/projects.ts and mock-server/server.ts) is just
-// "does this request carry an X-Admin: true header," which anyone could set
-// directly with curl/devtools regardless of what this file does. A real
-// auth story (Cognito, signed tokens, etc.) is out of scope for a portfolio
-// demo with no sensitive data behind it — worst case here is someone
-// vandalizes an example template, which is just re-created.
+// Admin mode = "this browser holds the admin token." The token itself is the
+// secret, and the backend is what checks it (X-Admin-Token vs. the
+// ADMIN_TOKEN env var on the Lambda / mock server) — so hiding the UI here
+// is only convenience; someone without the token can't edit or delete a
+// template no matter what they send. Nothing secret is baked into the
+// frontend bundle: the token is typed in by the admin and kept in
+// localStorage on that one browser.
 
-const ADMIN_STORAGE_KEY = "sundraft_admin";
+const ADMIN_TOKEN_KEY = "sundraft_admin_token";
 
-export function isAdminMode(): boolean {
-  return localStorage.getItem(ADMIN_STORAGE_KEY) === "true";
+export function getAdminToken(): string | null {
+  try {
+    return localStorage.getItem(ADMIN_TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
-// Returns whether admin mode ended up enabled, so callers can react (e.g.
-// show an error) without re-reading storage themselves.
-export function tryEnableAdminMode(password: string): boolean {
-  const expected = import.meta.env.VITE_ADMIN_PASSWORD as string | undefined;
-  if (!expected || password !== expected) return false;
-  localStorage.setItem(ADMIN_STORAGE_KEY, "true");
-  return true;
+export function isAdminMode(): boolean {
+  return getAdminToken() !== null;
+}
+
+// Callers must have verified the token against the backend first
+// (api.verifyAdminToken) — this just remembers it.
+export function enableAdminMode(token: string): void {
+  localStorage.setItem(ADMIN_TOKEN_KEY, token);
 }
 
 export function disableAdminMode(): void {
-  localStorage.removeItem(ADMIN_STORAGE_KEY);
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
 }

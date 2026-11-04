@@ -14,7 +14,7 @@ import {
   DeleteCommand,
   ScanCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { DEFAULT_PROJECT_NAME, type Project } from "sundraft-shared";
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -32,8 +32,15 @@ function getSessionId(event: APIGatewayProxyEventV2): string | undefined {
   return event.headers?.["x-session-id"] ?? event.headers?.["X-Session-Id"];
 }
 
+// Admin = the request carries the shared secret in X-Admin-Token. If
+// ADMIN_TOKEN isn't configured, nobody is admin (fails closed).
 function isAdmin(event: APIGatewayProxyEventV2): boolean {
-  return event.headers?.["x-admin"] === "true";
+  const expected = process.env.ADMIN_TOKEN;
+  const provided = event.headers?.["x-admin-token"];
+  if (!expected || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 export const handler = async (
@@ -44,6 +51,11 @@ export const handler = async (
   const body = event.body ? JSON.parse(event.body) : {};
 
   try {
+    // GET /admin/check — lets the UI confirm a token before switching on admin mode
+    if (path === "/admin/check" && method === "GET") {
+      return isAdmin(event) ? json(204) : json(403, { error: "Not an admin" });
+    }
+
     // GET/POST /projects
     if (path === "/projects" && method === "GET") {
       const sessionId = getSessionId(event);

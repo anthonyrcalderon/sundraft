@@ -8,9 +8,9 @@ import {
   openProject,
   deleteProject,
 } from "../features/projects/projectsSlice";
-import type { Project } from "../api/client";
+import { api, type Project } from "../api/client";
 import { DEFAULT_PROJECT_NAME } from "sundraft-shared";
-import { isAdminMode, tryEnableAdminMode, disableAdminMode } from "../api/adminAuth";
+import { isAdminMode, enableAdminMode, disableAdminMode } from "../api/adminAuth";
 
 interface Props {
   onOpen: (project: Project) => void;
@@ -54,18 +54,20 @@ export default function ProjectPicker({ onOpen }: Props) {
     dispatch(deleteProject(id));
   }
 
-  function handleToggleAdmin() {
+  async function handleToggleAdmin() {
     if (adminMode) {
       disableAdminMode();
       setAdminMode(false);
       return;
     }
-    const password = window.prompt("Admin password:");
-    if (password === null) return;
-    if (tryEnableAdminMode(password)) {
+    const token = window.prompt("Admin token:");
+    if (token === null) return;
+    try {
+      await api.verifyAdminToken(token);
+      enableAdminMode(token);
       setAdminMode(true);
-    } else {
-      window.alert("Wrong password.");
+    } catch {
+      window.alert("That token wasn't accepted.");
     }
   }
 

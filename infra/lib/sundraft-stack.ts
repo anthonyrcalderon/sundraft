@@ -33,8 +33,12 @@ export class SunDraftStack extends cdk.Stack {
       sortKey: { name: "updatedAt", type: dynamodb.AttributeType.STRING },
     });
 
+    // Shared secret for admin mode (editing/deleting example templates).
+    // Set ADMIN_TOKEN in the shell when deploying: `ADMIN_TOKEN=... npx cdk deploy`.
+    // If it's missing the stack still deploys but admin is disabled.
     const commonEnv = {
       TABLE_NAME: table.tableName,
+      ADMIN_TOKEN: process.env.ADMIN_TOKEN ?? "",
     };
 
     const projectsFn = new NodejsFunction(this, "ProjectsFunction", {
@@ -56,7 +60,7 @@ export class SunDraftStack extends cdk.Stack {
     const httpApi = new apigwv2.HttpApi(this, "SunDraftHttpApi", {
       apiName: "sundraft-api",
       corsPreflight: {
-        allowHeaders: ["Content-Type", "X-Session-Id", "X-Admin"],
+        allowHeaders: ["Content-Type", "X-Session-Id", "X-Admin-Token"],
         allowMethods: [
           apigwv2.CorsHttpMethod.GET,
           apigwv2.CorsHttpMethod.POST,
@@ -88,6 +92,11 @@ export class SunDraftStack extends cdk.Stack {
     httpApi.addRoutes({
       path: "/projects/{id}/fork",
       methods: [apigwv2.HttpMethod.POST],
+      integration,
+    });
+    httpApi.addRoutes({
+      path: "/admin/check",
+      methods: [apigwv2.HttpMethod.GET],
       integration,
     });
     httpApi.addRoutes({
