@@ -1,11 +1,27 @@
 import { useEffect, useState } from "react";
 import { api, type Project } from "./api/client";
+import { isAdminMode } from "./api/adminAuth";
 import ProjectPicker from "./components/ProjectPicker";
 import OpenedProjectView from "./components/OpenedProjectView";
 import "./App.css";
 
 function projectIdFromPath(pathname: string): string | null {
   return pathname.match(/^\/projects\/([^/]+)\/?$/)?.[1] ?? null;
+}
+
+// A template should never be opened raw except by an admin — direct-URL
+// visits (a saved link, a refresh) otherwise bypass the fork-on-open logic
+// that ProjectPicker's "Clone" action normally guarantees. Forking here too
+// keeps that guarantee ("editing an example never affects the next visitor")
+// true regardless of how a template's URL was reached.
+async function resolveProjectForUrl(id: string): Promise<Project> {
+  const project = await api.getProject(id);
+  if (project.isTemplate && !isAdminMode()) {
+    const forked = await api.forkProject(project.id);
+    window.history.replaceState(null, "", `/projects/${forked.id}`);
+    return forked;
+  }
+  return project;
 }
 
 function App() {
@@ -21,8 +37,7 @@ function App() {
   useEffect(() => {
     const id = projectIdFromPath(window.location.pathname);
     if (!id) return;
-    api
-      .getProject(id)
+    resolveProjectForUrl(id)
       .then(setOpenedProject)
       .catch(() => {
         // Gone, or the link was bad — fall back to the picker rather than
@@ -40,7 +55,7 @@ function App() {
         setOpenedProject(null);
         return;
       }
-      api.getProject(id).then(setOpenedProject).catch(() => setOpenedProject(null));
+      resolveProjectForUrl(id).then(setOpenedProject).catch(() => setOpenedProject(null));
     }
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);

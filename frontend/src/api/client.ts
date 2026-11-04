@@ -2,6 +2,7 @@
 // deployed. Only this file needs to change when that happens.
 
 import type { Project, CreateProjectInput, UpdateProjectInput } from "sundraft-shared";
+import { getAdminToken } from "./adminAuth";
 export type { Project } from "sundraft-shared";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
@@ -25,6 +26,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers: {
       "Content-Type": "application/json",
       "X-Session-Id": getSessionId(),
+      ...(getAdminToken() ? { "X-Admin-Token": getAdminToken()! } : {}),
       ...options.headers,
     },
   });
@@ -41,10 +43,16 @@ export const api = {
   getProject: (id: string) => request<Project>(`/projects/${id}`),
   createProject: (data: CreateProjectInput) =>
     request<Project>("/projects", { method: "POST", body: JSON.stringify(data) }),
+  createTemplate: (data: CreateProjectInput) =>
+    request<Project>("/templates", { method: "POST", body: JSON.stringify(data) }),
   forkProject: (id: string) =>
     request<Project>(`/projects/${id}/fork`, { method: "POST" }),
   updateProject: (id: string, data: UpdateProjectInput) =>
     request<Project>(`/projects/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteProject: (id: string) =>
     request<void>(`/projects/${id}`, { method: "DELETE" }),
+  // Resolves if the backend accepts this token as the admin token, rejects
+  // otherwise. The explicit header wins over any token already stored.
+  verifyAdminToken: (token: string) =>
+    request<void>("/admin/check", { headers: { "X-Admin-Token": token } }),
 };

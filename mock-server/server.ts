@@ -16,7 +16,7 @@ import { DEFAULT_PROJECT_NAME, type Project } from "sundraft-shared";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, "db.json");
 const SEED_PATH = path.join(__dirname, "db.seed.json");
-const PORT = 4000;
+const PORT = Number(process.env.PORT ?? 4000);
 
 // db.json is generated, not committed — it's your local mutable state and
 // changes every time you add/edit a project. db.seed.json is the committed
@@ -55,10 +55,13 @@ function writeDb(db: Db): void {
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
 
+// Same contract as the real backend: admin = X-Admin-Token matches the
+// ADMIN_TOKEN env var. Locally it defaults to "dev-admin" so admin mode works
+// out of the box; the deployed Lambda has no default and fails closed.
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN ?? "dev-admin";
+
 function isAdmin(req: Request): boolean {
-  // Placeholder admin check for the mock server only. The real backend will
-  // need a real auth story for admin mode — this just unblocks local dev.
-  return req.header("x-admin") === "true";
+  return req.header("x-admin-token") === ADMIN_TOKEN;
 }
 
 function requireSessionId(req: Request, res: Response): string | null {
@@ -69,6 +72,12 @@ function requireSessionId(req: Request, res: Response): string | null {
   }
   return sessionId;
 }
+
+// Lets the UI confirm a token before switching on admin mode.
+app.get("/api/admin/check", (req: Request, res: Response) => {
+  if (!isAdmin(req)) return void res.status(403).json({ error: "Not an admin" });
+  res.status(204).end();
+});
 
 // List projects visible to this session: all templates + this session's own projects
 app.get("/api/projects", (req: Request, res: Response) => {

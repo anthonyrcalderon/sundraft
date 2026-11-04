@@ -413,3 +413,19 @@ section h2 {
   padding: 1rem 1.1rem;
   margin: 0.5rem 0 0;
 }
+
+.admin-toggle {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+  font-size: 0.85rem;
+}
+
+.admin-banner {
+  background: #fff4e5;
+  border: 1px solid #f0c675;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}

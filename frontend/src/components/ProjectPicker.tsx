@@ -4,11 +4,13 @@ import type { AppDispatch, RootState } from "../app/store";
 import {
   fetchProjects,
   createBlankProject,
+  createTemplate,
   openProject,
   deleteProject,
 } from "../features/projects/projectsSlice";
-import type { Project } from "../api/client";
+import { api, type Project } from "../api/client";
 import { DEFAULT_PROJECT_NAME } from "sundraft-shared";
+import { isAdminMode, enableAdminMode, disableAdminMode } from "../api/adminAuth";
 
 interface Props {
   onOpen: (project: Project) => void;
@@ -17,6 +19,7 @@ interface Props {
 export default function ProjectPicker({ onOpen }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const { items, status, error } = useSelector((s: RootState) => s.projects);
+  const [adminMode, setAdminMode] = useState(isAdminMode());
 
   useEffect(() => {
     dispatch(fetchProjects());
@@ -25,9 +28,16 @@ export default function ProjectPicker({ onOpen }: Props) {
   const templates = items.filter((p) => p.isTemplate);
   const myProjects = items.filter((p) => !p.isTemplate);
 
+  // Regular path: opening an example always forks it, so editing it can
+  // never affect what the next visitor sees.
   async function handleOpen(project: Project) {
     const result = await dispatch(openProject(project)).unwrap();
     onOpen(result);
+  }
+
+  // Admin path: edit the template directly instead of forking a copy.
+  function handleEditTemplate(project: Project) {
+    onOpen(project);
   }
 
   async function handleNewBlank() {
@@ -35,8 +45,30 @@ export default function ProjectPicker({ onOpen }: Props) {
     onOpen(result);
   }
 
+  async function handleNewTemplate() {
+    const result = await dispatch(createTemplate()).unwrap();
+    onOpen(result);
+  }
+
   function handleDelete(id: string) {
     dispatch(deleteProject(id));
+  }
+
+  async function handleToggleAdmin() {
+    if (adminMode) {
+      disableAdminMode();
+      setAdminMode(false);
+      return;
+    }
+    const token = window.prompt("Admin token:");
+    if (token === null) return;
+    try {
+      await api.verifyAdminToken(token);
+      enableAdminMode(token);
+      setAdminMode(true);
+    } catch {
+      window.alert("That token wasn't accepted.");
+    }
   }
 
   return (
@@ -67,7 +99,14 @@ export default function ProjectPicker({ onOpen }: Props) {
         </p>
       )}
 
-      <ProjectListSection title="Examples" projects={templates} actionLabel="Clone" onOpen={handleOpen} />
+      <ProjectListSection
+        title="Examples"
+        projects={templates}
+        actionLabel="Clone"
+        onOpen={handleOpen}
+        onEditTemplate={adminMode ? handleEditTemplate : undefined}
+        onDelete={adminMode ? handleDelete : undefined}
+      />
       <ProjectListSection
         title="Your projects"
         projects={myProjects}
@@ -80,6 +119,19 @@ export default function ProjectPicker({ onOpen }: Props) {
             : undefined
         }
       />
+
+      <p className="admin-toggle">
+        <button className="link" onClick={handleToggleAdmin}>
+          {adminMode ? "Exit admin mode" : "Admin"}
+        </button>
+        {adminMode && (
+          <>
+            {" "}
+            <span className="muted small">— editing examples in place</span>{" "}
+            <button onClick={handleNewTemplate}>+ New example</button>
+          </>
+        )}
+      </p>
     </div>
   );
 }
@@ -89,6 +141,7 @@ function ProjectListSection({
   projects,
   actionLabel,
   onOpen,
+  onEditTemplate,
   onDelete,
   emptyMessage,
 }: {
@@ -96,6 +149,7 @@ function ProjectListSection({
   projects: Project[];
   actionLabel: string;
   onOpen: (project: Project) => void;
+  onEditTemplate?: (project: Project) => void;
   onDelete?: (id: string) => void;
   emptyMessage?: string;
 }) {
@@ -141,6 +195,7 @@ function ProjectListSection({
                   <button className="primary-button" onClick={() => onOpen(p)}>
                     {actionLabel}
                   </button>
+                  {onEditTemplate && <button onClick={() => onEditTemplate(p)}>Edit</button>}
                   {onDelete && (
                     <button className="danger-button" onClick={() => setConfirmingDeleteId(p.id)}>
                       Delete
