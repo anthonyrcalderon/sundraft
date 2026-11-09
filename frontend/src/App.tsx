@@ -2,8 +2,13 @@ import { useEffect, useState } from "react";
 import { api, type Project } from "./api/client";
 import { isAdminMode } from "./api/adminAuth";
 import ProjectPicker from "./components/ProjectPicker";
+import AdminPage from "./components/AdminPage";
 import OpenedProjectView from "./components/OpenedProjectView";
 import "./App.css";
+
+function isAdminPath(pathname: string): boolean {
+  return /^\/admin\/?$/.test(pathname);
+}
 
 function projectIdFromPath(pathname: string): string | null {
   return pathname.match(/^\/projects\/([^/]+)\/?$/)?.[1] ?? null;
@@ -26,6 +31,7 @@ async function resolveProjectForUrl(id: string): Promise<Project> {
 
 function App() {
   const [openedProject, setOpenedProject] = useState<Project | null>(null);
+  const [onAdminPage, setOnAdminPage] = useState(() => isAdminPath(window.location.pathname));
   // Only matters for the very first render — whether that's a deep link (a
   // direct visit, or a refresh while a project was open) that needs its
   // project fetched before anything can render.
@@ -50,6 +56,7 @@ function App() {
   // Follow the browser's own back/forward between the picker and a project.
   useEffect(() => {
     function handlePopState() {
+      setOnAdminPage(isAdminPath(window.location.pathname));
       const id = projectIdFromPath(window.location.pathname);
       if (!id) {
         setOpenedProject(null);
@@ -66,9 +73,18 @@ function App() {
     setOpenedProject(project);
   }
 
+  // An admin who opened a template straight from /admin goes back there;
+  // everyone else goes back to the public picker.
   function handleBack() {
-    window.history.pushState(null, "", "/");
+    const toAdmin = openedProject?.isTemplate === true && isAdminMode();
+    window.history.pushState(null, "", toAdmin ? "/admin" : "/");
+    setOnAdminPage(toAdmin);
     setOpenedProject(null);
+  }
+
+  function handleExitAdmin() {
+    window.history.pushState(null, "", "/");
+    setOnAdminPage(false);
   }
 
   if (loading) {
@@ -81,6 +97,10 @@ function App() {
 
   if (openedProject) {
     return <OpenedProjectView project={openedProject} onBack={handleBack} />;
+  }
+
+  if (onAdminPage) {
+    return <AdminPage onOpen={handleOpen} onExit={handleExitAdmin} />;
   }
 
   return <ProjectPicker onOpen={handleOpen} />;
