@@ -8,18 +8,20 @@ import {
   openProject,
   deleteProject,
 } from "../features/projects/projectsSlice";
-import { api, type Project } from "../api/client";
+import type { Project } from "../api/client";
 import { DEFAULT_PROJECT_NAME } from "sundraft-shared";
-import { isAdminMode, enableAdminMode, disableAdminMode } from "../api/adminAuth";
 
 interface Props {
   onOpen: (project: Project) => void;
+  // Only the /admin page passes these. The public picker never shows admin
+  // controls, even in a browser that's holding an admin token.
+  adminMode?: boolean;
+  onExitAdmin?: () => void;
 }
 
-export default function ProjectPicker({ onOpen }: Props) {
+export default function ProjectPicker({ onOpen, adminMode = false, onExitAdmin }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const { items, status, error } = useSelector((s: RootState) => s.projects);
-  const [adminMode, setAdminMode] = useState(isAdminMode());
 
   useEffect(() => {
     dispatch(fetchProjects());
@@ -54,25 +56,18 @@ export default function ProjectPicker({ onOpen }: Props) {
     dispatch(deleteProject(id));
   }
 
-  async function handleToggleAdmin() {
-    if (adminMode) {
-      disableAdminMode();
-      setAdminMode(false);
-      return;
-    }
-    const token = window.prompt("Admin token:");
-    if (token === null) return;
-    try {
-      await api.verifyAdminToken(token);
-      enableAdminMode(token);
-      setAdminMode(true);
-    } catch {
-      window.alert("That token wasn't accepted.");
-    }
-  }
-
   return (
     <div className="app">
+      {adminMode && (
+        <p className="admin-banner">
+          <strong>Admin mode</strong> — Edit and Delete change the shared examples for every
+          visitor.{" "}
+          <button onClick={handleNewTemplate}>+ New example</button>{" "}
+          <button className="link" onClick={onExitAdmin}>
+            Exit admin mode
+          </button>
+        </p>
+      )}
       <div className="brand">
         <img src="/favicon.svg" alt="" className="brand-icon" />
         <h1>
@@ -119,19 +114,6 @@ export default function ProjectPicker({ onOpen }: Props) {
             : undefined
         }
       />
-
-      <p className="admin-toggle">
-        <button className="link" onClick={handleToggleAdmin}>
-          {adminMode ? "Exit admin mode" : "Admin"}
-        </button>
-        {adminMode && (
-          <>
-            {" "}
-            <span className="muted small">— editing examples in place</span>{" "}
-            <button onClick={handleNewTemplate}>+ New example</button>
-          </>
-        )}
-      </p>
     </div>
   );
 }
