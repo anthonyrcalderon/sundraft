@@ -42,7 +42,7 @@ export class SunDraftStack extends cdk.Stack {
     };
 
     const projectsFn = new NodejsFunction(this, "ProjectsFunction", {
-      runtime: Runtime.NODEJS_20_X,
+      runtime: Runtime.NODEJS_24_X,
       entry: "lambda/projects.ts",
       handler: "handler",
       environment: commonEnv,
